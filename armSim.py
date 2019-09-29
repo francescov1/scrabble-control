@@ -4,6 +4,7 @@ import numpy as np
 import math
 from math import pi, sin, cos, sqrt
 from collections import namedtuple
+import copy
 
 def build_u_v(u_v):
     return (np.array(u_v[0]).reshape(3,1),
@@ -34,6 +35,19 @@ class RefFrame:
             self.compute_transform()
         else:
             self.change_ref_frame(ref_frame)
+        
+        self.prev_state = namedtuple('PrevState', ['u_v', 'transform', 'origin'])
+        self.__backup()
+        
+    def __backup(self):
+        self.prev_state.u_v = self.u_v
+        self.prev_state.origin = self.origin
+        self.prev_state.transform = self.transform
+    
+    def undo(self):
+        self.u_v = self.prev_state.u_v
+        self.transform = self.prev_state.transform
+        self.origin = self.prev_state.origin
     
     def magnitude(self, vector):
         return sqrt(np.sum(np.power(vector, 2)))
@@ -41,6 +55,7 @@ class RefFrame:
     def change_ref_frame(self, ref_frame):
         self.ref_frame = ref_frame
         self.compute_transform()
+        self.__backup() #don't allow an undo from this state
     
     def compute_transform(self):
         global_u_v = np.array(((1,0,0),(0,1,0),(0,0,1)))
@@ -49,9 +64,8 @@ class RefFrame:
             for j in range(3):
                 u_v = np.squeeze(self.u_v[j].reshape(1,3))
                 self.transform[i][j] = np.dot(global_u_v[i], u_v)
-        #self.__test()
     
-    def __test(self, iterations = 10):
+    def test(self, iterations = 10):
         for u_v in self.u_v:
             assert round(self.magnitude(u_v), 6) == 1, "{}".format(self.magnitude(u_v))
         
@@ -111,12 +125,12 @@ class RefFrame:
         else:
             print("{} not recognized".format(axis))
             return
-        #print(self.u_v)
+        self.__backup()
         self.u_v = np.dot(R, self.u_v)
-        #print(self.u_v)
         self.compute_transform()
         
     def translate(self, origin):
+        self.__backup()
         self.origin = origin
 
 # GFR = RefFrame()
@@ -137,24 +151,19 @@ class RefFrame:
 class Arm:
     def __init__(self):
         self.parts = {}
-        
-        base = Joint('base', (0,0,0))
-        shoulder = Joint('shoulder', (0,0,1))
-        shoulder.attach(base)
-        elbow = Joint('elbow',(1,0,0))
-        elbow.attach(shoulder)
-        wrist = Joint('wrist', (0.25,0,0))
-        wrist.attach(elbow)
-        elbow.rotate('x', pi/2)
-        wrist.rotate('x', pi/2)
-
-        self.add(base)
-        self.add(shoulder)
-        self.add(elbow)
-        self.add(wrist)
-        self.plot()
     
     def solver(self, coord):
+        best_s_a = 0
+        best_e_a = 0
+        current_best = 1e10
+        for key, part in self.parts:
+            if part.dof.fixed:
+                break
+            if part.dof.type == 'rotation':
+                range = p.linspace(part.dof.range[0],part.dof.range[1])
+                for angle in range:
+                    part.rotate(part.dof.axis, angle)
+                    
         return best_s_a, best_e_a
     
     #non-general function based on specific arm shape
@@ -164,9 +173,6 @@ class Arm:
         shoulder = self.parts['shoulder']
         elbow = self.parts['elbow']
         wrist = self.parts['wrist']
-        
-        theta = math.atan(coord[1]/coord[0])
-        base.rotate('z', theta)
         
         length = sqrt(np.sum(np.power(coord, 2)))
         
@@ -231,6 +237,18 @@ class Joint(RefFrame):
     def __init__(self, name, r):
         RefFrame.__init__(self, name)
         self.r = np.array(r).reshape(3,1)
+        self.dof = namedtuple('DoF', ['type', 'axis', 'range', 'fixed'])
+        self.dof.fixed = True
+    
+    def dynamic(self, type, axis, range):
+        axis = axis.lower()
+        type = type.lower()
+        assert axis in ['x','y','z']
+        assert type in ['rotation, translation']
+        self.dof.type = type
+        self.dof.axis = axis
+        self.dof.range = range
+        self.dof.fixed = False
     
     def attach(self, obj):
         self.change_ref_frame(obj)
@@ -245,8 +263,26 @@ class Joint(RefFrame):
     def length(self):
         a = np.subtract(self.mapFrom(self.r), self.origin)
         return sqrt(np.sum(np.power(a, 2)))
+    
+    
 
-arm = Arm()
-arm.motionControl((1,1,0.5))
+def armSetup():
+    arm = Arm()
+    base = Joint('base', (0,0,0))
+    shoulder = Joint('shoulder', (0,0,1))
+    shoulder.attach(base)
+    elbow = Joint('elbow',(1,0,0))
+    elbow.attach(shoulder)
+    wrist = Joint('wrist', (0.25,0,0))
+    wrist.attach(elbow)
 
-#arm.plot()
+    arm.add(base)
+    arm.add(shoulder)
+    arm.add(elbow)
+    arm.add(wrist)
+    return arm
+    
+arm = armSetup()
+#arm.motionControl((1,1,0.5))
+
+arm.plot()

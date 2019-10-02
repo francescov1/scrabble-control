@@ -17,6 +17,7 @@ class GlobalRefFrame:
         self.origin = np.array((0,0,0)).reshape(3,1)
         self.u_v = build_u_v(((1,0,0),(0,1,0),(0,0,1)))
         self.transform = np.identity(3)
+        self.angle = [0,0,0]
     
     def mapTo(self, coord):
         return coord
@@ -30,24 +31,27 @@ class RefFrame:
         self.u_v = build_u_v(u_v)
         self.origin = np.array(origin).reshape(3,1)
         self.ref_frame = ref_frame
+        self.angle = [0,0,0]
         if self.ref_frame == None:
             self.ref_frame = GlobalRefFrame()
             self.compute_transform()
         else:
             self.change_ref_frame(ref_frame)
         
-        self.prev_state = namedtuple('PrevState', ['u_v', 'transform', 'origin'])
+        self.prev_state = namedtuple('PrevState', ['u_v', 'transform', 'origin','angle'])
         self.__backup()
         
     def __backup(self):
         self.prev_state.u_v = self.u_v
         self.prev_state.origin = self.origin
         self.prev_state.transform = self.transform
+        self.prev_state.angle = self.angle
     
     def undo(self):
         self.u_v = self.prev_state.u_v
         self.transform = self.prev_state.transform
         self.origin = self.prev_state.origin
+        self.angle = self.prev_state.angle
     
     def magnitude(self, vector):
         return sqrt(np.sum(np.power(vector, 2)))
@@ -115,17 +119,19 @@ class RefFrame:
     def rotate(self, axis, angle):
         sin_a = sin(angle)
         cos_a = cos(angle)
-        
+        self.__backup()
         if axis.lower()=='x':
             R = np.array([[1, 0, 0],[0, cos_a, -sin_a],[0, sin_a, cos_a]])
+            self.angle[0] += angle
         elif axis.lower()=='y':
             R = np.array([[cos_a, 0, sin_a],[0, 1, 0],[-sin_a, 0, cos_a]])
+            self.angle[1] += angle
         elif axis.lower()=='z':
             R = np.array([[cos_a, -sin_a, 0],[sin_a, cos_a, 0],[0, 0, 1]])
+            self.angle[2] += angle
         else:
             print("{} not recognized".format(axis))
             return
-        self.__backup()
         self.u_v = np.dot(R, self.u_v)
         self.compute_transform()
         
@@ -133,38 +139,82 @@ class RefFrame:
         self.__backup()
         self.origin = origin
 
-# GFR = RefFrame()
-# f1 = RefFrame(origin=(1,0,1))
-# f1.change_ref_frame(GFR)
-# f2 = RefFrame()
-# f2.change_ref_frame(f1)
-# f1.rotate('x', pi/4)
-# f2.rotate('x', pi/4)
 
-# t2 = f2.mapTo((0,1,1))
-# t3 = f2.mapFrom(t2)
-# print('mapTo\n',t2)
-# print('mapFrom\n',t3)
-
-# exit()
+class Joint(RefFrame):
+    def __init__(self, name, r):
+        RefFrame.__init__(self, name)
+        self.r = np.array(r).reshape(3,1)
+        self.dof = namedtuple('DoF', ['type', 'axis', 'range', 'fixed'])
+        self.dof.fixed = True
+    
+    def __str__(self):
+        return ('Joint.{}'.format(self.name))
+    def __repr__(self):
+        return self.__str__()
+    
+    def dynamic(self, type, axis, range):
+        axis = axis.lower()
+        type = type.lower()
+        assert axis in ['x','y','z']
+        assert type in ['rotation','translation']
+        self.dof.type = type
+        self.dof.axis = axis
+        self.dof.range = range
+        self.dof.fixed = False
+    
+    def get_angle(self):
+        map = {'x':0,'y':1,'z':2}
+        return self.angle[map[self.dof.axis]]
+        
+    def attach(self, obj):
+        self.change_ref_frame(obj)
+        self.translate(obj.r)
+    
+    def rotate(self, axis, angle):
+        RefFrame.rotate(self, axis, angle)
+    
+    def translate(self, origin):
+        RefFrame.translate(self, origin)
+        
+    def length(self):
+        a = np.subtract(self.mapFrom(self.r), self.origin)
+        return sqrt(np.sum(np.power(a, 2)))
 
 class Arm:
     def __init__(self):
         self.parts = {}
     
-    def solver(self, coord):
-        best_s_a = 0
-        best_e_a = 0
-        current_best = 1e10
-        for key, part in self.parts:
-            if part.dof.fixed:
-                break
-            if part.dof.type == 'rotation':
-                range = p.linspace(part.dof.range[0],part.dof.range[1])
+    def generateTraining(self, resolution=3):
+    #only for parts that rotate
+        rotating_parts = []
+        for key, part in self.parts.items():
+            if not part.dof.fixed  and part.dof.type == 'rotation':
+                rotating_parts.append(part)
+    
+        dataset_width = len(rotating_parts)+=3
+        dataset = np.zeros(shape=(dataset_width,1))
+        
+        def add_data_point():
+            dpt = np.zeros(shape=(dataset_width,1))
+            for i in range(len(rotating_parts)):
+                dpt[i] = rotating_parts[i].get_angle()
+            dpt[-3:-1] = tuple(rotating_parts[-1].mapFrom(rotating_parts[i].r))
+            
+        def generator(parts):
+            index = 0
+            for part in parts:
+                range = np.linspace(part.dof.range[0], part.dof.range[1], resolution)
                 for angle in range:
                     part.rotate(part.dof.axis, angle)
-                    
-        return best_s_a, best_e_a
+                    if len(parts)-index > 1:
+                        generator(parts[1:])
+                        add_data_point()
+                    #reset
+                    part.undo
+                index+=1
+                
+        generator(rotating_parts)
+        print(rotating_parts)
     
     #non-general function based on specific arm shape
     def motionControl(self, coord):
@@ -233,45 +283,15 @@ class Arm:
         else:
             self.parts[object.name] = object
     
-class Joint(RefFrame):
-    def __init__(self, name, r):
-        RefFrame.__init__(self, name)
-        self.r = np.array(r).reshape(3,1)
-        self.dof = namedtuple('DoF', ['type', 'axis', 'range', 'fixed'])
-        self.dof.fixed = True
     
-    def dynamic(self, type, axis, range):
-        axis = axis.lower()
-        type = type.lower()
-        assert axis in ['x','y','z']
-        assert type in ['rotation, translation']
-        self.dof.type = type
-        self.dof.axis = axis
-        self.dof.range = range
-        self.dof.fixed = False
-    
-    def attach(self, obj):
-        self.change_ref_frame(obj)
-        self.translate(obj.r)
-    
-    def rotate(self, axis, angle):
-        RefFrame.rotate(self, axis, angle)
-    
-    def translate(self, origin):
-        RefFrame.translate(self, origin)
-        
-    def length(self):
-        a = np.subtract(self.mapFrom(self.r), self.origin)
-        return sqrt(np.sum(np.power(a, 2)))
-    
-    
-
 def armSetup():
     arm = Arm()
     base = Joint('base', (0,0,0))
     shoulder = Joint('shoulder', (0,0,1))
+    shoulder.dynamic('rotation', 'x', (-pi/2,pi/2))
     shoulder.attach(base)
     elbow = Joint('elbow',(1,0,0))
+    elbow.dynamic('rotation', 'x', (-pi/2,pi/2))
     elbow.attach(shoulder)
     wrist = Joint('wrist', (0.25,0,0))
     wrist.attach(elbow)
@@ -283,6 +303,7 @@ def armSetup():
     return arm
     
 arm = armSetup()
+arm.generateTraining()
 #arm.motionControl((1,1,0.5))
 
-arm.plot()
+#arm.plot()

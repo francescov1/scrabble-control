@@ -35,20 +35,20 @@ class RefFrame:
         else:
             self.change_ref_frame(ref_frame)
 
-        self.prev_state = namedtuple('PrevState', ['u_v', 'transform', 'origin','angle'])
-        self.__backup()
+        self.intial_state = namedtuple('PrevState', ['u_v', 'transform', 'origin', 'angle'])
+        self.backup()
 
-    def __backup(self):
-        self.prev_state.u_v = self.u_v
-        self.prev_state.origin = self.origin
-        self.prev_state.transform = self.transform
-        self.prev_state.angle = self.angle
+    def backup(self):
+        self.intial_state.u_v = self.u_v
+        self.intial_state.origin = self.origin
+        self.intial_state.transform = self.transform
+        self.intial_state.angle = self.angle
 
-    def undo(self):
-        self.u_v = self.prev_state.u_v
-        self.transform = self.prev_state.transform
-        self.origin = self.prev_state.origin
-        self.angle = self.prev_state.angle
+    def reset(self):
+        self.u_v = self.intial_state.u_v
+        self.transform = self.intial_state.transform
+        self.origin = self.intial_state.origin
+        self.angle = self.intial_state.angle
 
     def magnitude(self, vector):
         return sqrt(np.sum(np.power(vector, 2)))
@@ -56,7 +56,6 @@ class RefFrame:
     def change_ref_frame(self, ref_frame):
         self.ref_frame = ref_frame
         self.compute_transform()
-        self.__backup() #don't allow an undo from this state
 
     def compute_transform(self):
         global_u_v = np.array(((1,0,0),(0,1,0),(0,0,1)))
@@ -116,7 +115,6 @@ class RefFrame:
     def rotate(self, axis, angle):
         sin_a = sin(angle)
         cos_a = cos(angle)
-        self.__backup()
         if axis.lower()=='x':
             R = np.array([[1, 0, 0],[0, cos_a, -sin_a],[0, sin_a, cos_a]])
         elif axis.lower()=='y':
@@ -131,7 +129,6 @@ class RefFrame:
         self.compute_transform()
 
     def translate(self, origin):
-        self.__backup()
         self.origin = origin
 
 
@@ -148,7 +145,7 @@ class Joint(RefFrame):
     def __repr__(self):
         return self.__str__()
 
-    def dynamic(self, type, axis, range, rule=(0,0,0)):
+    def dynamic(self, type, axis, range=(0,0), rule=(0,0,0)):
         axis = axis.lower()
         type = type.lower()
         assert axis in ['x','y','z']
@@ -159,12 +156,13 @@ class Joint(RefFrame):
         self.dof.type = type
         self.dof.axis = axis
         self.dof.range = range
-        self.dof.rule = rule
+        self.dof.rule = np.array(rule).reshape(3,1)
         self.dof.fixed = False
 
     def attach(self, obj):
         self.change_ref_frame(obj)
         self.translate(obj.r)
+        self.backup() #new intial state
 
     def rotate(self, axis, angle):
         RefFrame.rotate(self, axis, angle)
@@ -172,6 +170,17 @@ class Joint(RefFrame):
     def translate(self, origin):
         RefFrame.translate(self, origin)
 
+    def check_rule(self):
+        if self.dof.type != 'rule':
+            print('No rule defined')
+            return
+        act_origin = self.ref_frame.mapFrom(self.origin)
+        target = self.mapTo(np.add(self.dof.rule,act_origin))
+        target = np.divide(target, self.magnitude(target))
+        self.r = np.multiply(target, self.length())
+        #self.backup()
+
     def length(self):
-        a = np.subtract(self.mapFrom(self.r), self.origin)
+        act_origin = self.ref_frame.mapFrom(self.origin)
+        a = np.subtract(self.mapFrom(self.r), act_origin)
         return sqrt(np.sum(np.power(a, 2)))

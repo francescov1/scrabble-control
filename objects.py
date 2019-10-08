@@ -1,7 +1,8 @@
 import numpy as np
 import math
-from math import pi, sin, cos, sqrt
+from math import pi, sin, cos, sqrt, acos
 from collections import namedtuple
+from copy import copy
 
 def build_u_v(u_v):
     return (np.array(u_v[0]).reshape(3,1),
@@ -39,16 +40,16 @@ class RefFrame:
         self.backup()
 
     def backup(self):
-        self.intial_state.u_v = self.u_v
-        self.intial_state.origin = self.origin
-        self.intial_state.transform = self.transform
-        self.intial_state.angle = self.angle
+        self.intial_state.u_v = copy(self.u_v)
+        self.intial_state.origin = copy(self.origin)
+        self.intial_state.transform = copy(self.transform)
+        self.intial_state.angle = copy(self.angle)
 
     def reset(self):
-        self.u_v = self.intial_state.u_v
-        self.transform = self.intial_state.transform
-        self.origin = self.intial_state.origin
-        self.angle = self.intial_state.angle
+        self.u_v = copy(self.intial_state.u_v)
+        self.transform = copy(self.intial_state.transform)
+        self.origin = copy(self.intial_state.origin)
+        self.angle = copy(self.intial_state.angle)
 
     def magnitude(self, vector):
         return sqrt(np.sum(np.power(vector, 2)))
@@ -124,7 +125,7 @@ class RefFrame:
         else:
             print("{} not recognized".format(axis))
             return
-        self.angle[axis] = angle
+        self.angle[axis] += angle
         self.u_v = np.dot(R, self.u_v)
         self.compute_transform()
 
@@ -134,11 +135,25 @@ class RefFrame:
 
 class Joint(RefFrame):
     def __init__(self, name, r):
-        RefFrame.__init__(self, name)
         self.r = np.array(r).reshape(3,1)
         #DOF=Degree of freedom. Used when calculating motion automatically
         self.dof = namedtuple('DoF', ['type', 'axis', 'range', 'r', 'fixed'])
         self.dof.fixed = True
+
+        RefFrame.__init__(self, name)
+
+    def backup(self):
+        self.backup_r = copy(self.r)
+        np.testing.assert_array_equal(self.r, self.backup_r)
+        RefFrame.backup(self)
+
+    def reset_r(self):
+        self.r = copy(self.backup_r)
+        np.testing.assert_array_equal(self.r, self.backup_r)
+
+    def reset(self):
+        self.reset_r()
+        RefFrame.reset(self)
 
     def __str__(self):
         return ('Joint.{}'.format(self.name))
@@ -166,19 +181,45 @@ class Joint(RefFrame):
 
     def rotate(self, axis, angle):
         RefFrame.rotate(self, axis, angle)
+        #self.update_angles()
 
     def translate(self, origin):
         RefFrame.translate(self, origin)
+        #self.update_angles()
 
     def check_rule(self):
+        self.reset_r()
         if self.dof.type != 'rule':
             print('No rule defined')
             return
         act_origin = self.ref_frame.mapFrom(self.origin)
         target = self.mapTo(np.add(self.dof.rule,act_origin))
-        target = np.divide(target, self.magnitude(target))
-        self.r = np.multiply(target, self.length())
-        #self.backup()
+        target = target/self.magnitude(target)
+        assert round(self.magnitude(target), 10) == 1, self.magnitude(target)
+        self.r = np.multiply(target, self.magnitude(self.r))
+
+    def R_angle(self):
+        #works for single axis rotation, wouldn't trust it for multi-axis
+        #kind of hacky, only to be used after solving rule for r
+        Rxy = np.multiply(self.r, np.matrix("1;1;0"))
+        Rxz = np.multiply(self.r, np.matrix("1;0;1"))
+        Ryz = np.multiply(self.r, np.matrix("0;1;1"))
+        def calc_angle(a, b):
+            a = a.transpose()
+            a_mag = self.magnitude(a)
+            b_mag = self.magnitude(b)
+            if a_mag * b_mag == 0:
+                return 0
+            dot = np.dot(a,b)
+            # avoid multipying by zero to preserve sign
+            a[a==0]=1
+            sign = 1 if np.prod(a) > 0 else -1
+            return sign * acos(dot/(a_mag*b_mag))
+        angles = {}
+        #angles['x'] = calc_angle(Ryz, np.matrix("0;0;1"))
+        angles['y'] = calc_angle(Rxz, np.matrix("0;0;1"))
+        #angles['z'] = calc_angle(Rxy, np.matrix("1;0;0"))
+        return angles
 
     def length(self):
         act_origin = self.ref_frame.mapFrom(self.origin)

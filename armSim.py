@@ -3,104 +3,158 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import math
 from math import pi, sin, cos, sqrt
-import sklearn
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
+import sqlite3
+from datetime import datetime
+import os
 
 from objects import Joint
+
+class Database:
+    TBL_NAME = 'database'
+    def __init__(self, path):
+        self.open(path)
+
+    def create(self, names):
+        seperator = ' real,'
+        names = seperator.join(names)+' real'
+        self.c.execute('''CREATE TABLE {}
+            ({}, X real, Y real, Z real)'''.format(Database.TBL_NAME, names))
+
+    def keys(self):
+        keys = self.c.execute("PRAGMA table_info({})".format(Database.TBL_NAME))
+        keys = [a[1] for a in keys.fetchall()]
+        return keys
+
+    def insert(self, values):
+        keys = self.keys()
+        insertion_list = [None] * len(keys)
+        for key, value in values.items():
+            insertion_list[keys.index(key)] = value
+        insertion_list = tuple(insertion_list)
+        assert None not in insertion_list
+        template = ','.join(['?']*len(keys))
+        self.c.execute('INSERT INTO {} VALUES ({})'.format(Database.TBL_NAME, template), insertion_list)
+        self.conn.commit()
+
+    def find_match(self, target):
+        col = self.keys()
+        col = ','.join(col)
+        filter = '('
+        i = 0
+        for axis in ['X','Y','Z']:
+            filter += '({} BETWEEN {} AND {})'.format(axis, math.floor(target[i]), math.ceil(target[i]))
+            i += 1
+            if i < 3:
+                filter += ' AND '
+        filter += ')'
+        query = 'select {} from {} where {}'.format(col, Database.TBL_NAME, filter)
+        result = self.c.execute(query)
+        best_delta = 100
+        best_row = None
+        for row in result.fetchall():
+            delta = sqrt((row[-3]-target[0])**2+(row[-2]-target[1])**2+(row[-1]-target[2])**2)
+            if delta < best_delta:
+                best_delta = delta
+                best_row = row
+        return best_row, best_delta
+
+    def open(self, path):
+        self.conn = sqlite3.connect(path)
+        self.c = self.conn.cursor()
+
+    def close(self):
+        self.conn.commit()
+        self.conn.close()
+
+    def __del__(self):
+        self.close()
 
 class Arm:
     def __init__(self):
         self.parts = {}
-        self.model = None
         self.dynamic_parts = []
-        self.trained = False
+        self.db = None
 
-    def generateModel(self, X, Y):
-        #X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size=0.1, random_state=5)
-        model = RandomForestRegressor(n_estimators=50, max_features=3)
-        model.fit(X, Y)
-        #https://towardsdatascience.com/linear-regression-on-boston-housing-dataset-f409b7e4a155
-        # model evaluation for training set
-        #y_train_predict = model.predict(X_train)
-        #rmse = (np.sqrt(mean_squared_error(Y_train, y_train_predict)))
-        #print("The model performance for training set")
-        #print("--------------------------------------")
-        #print('RMSE is {}'.format(rmse))
-        #print("\n")
-        # model evaluation for testing set
-        #y_test_predict = model.predict(X_test)
-        #rmse = (np.sqrt(mean_squared_error(Y_test, y_test_predict)))
-        #print("The model performance for testing set")
-        #print("--------------------------------------")
-        #print('RMSE is {}'.format(rmse))
-        return model
+    def importDatabase(self, file):
+        self.db = Database(file)
+        assert not bool(set([part.name for part in self.dynamic_parts]).intersection(set(self.db.keys())))
 
-    def learn(self, dataset):
-        Y = dataset[:,0:-3]
-        X = dataset[:,-4:-1]
-        self.model = self.generateModel(X,Y)
-        self.trained = True
-
-    def generateTraining(self, resolution=2):
+    def generateDatabase(self, resolution=2, debug=False, memory=False):
+        if memory:
+            db_name = ':memory:'
+        else:
+            now = datetime.now()
+            db_name = now.strftime("%Y-%m-%d-%H%M%S")+".db"
+        self.db = Database(db_name)
     #only for parts that rotate
         for key, part in self.parts.items():
             if not part.dof.fixed and part.dof.type in ['rotation', 'rule']:
                 self.dynamic_parts.append(part)
-
-        dataset_width = len(self.dynamic_parts) + 3
-        dataset = np.matrix([part.name for part in self.dynamic_parts]+['X','Y','Z'])
-        dataset.reshape((1, dataset_width))
+        self.db.create([part.name for part in self.dynamic_parts])
 
         def add_data_point():
-            nonlocal dataset
-            dpt = np.zeros(shape=(1, dataset_width))
-            for i in range(len(self.dynamic_parts)):
-                dpt[0][i] = self.dynamic_parts[i].angle[self.dynamic_parts[i].dof.axis]
-            endpoint = np.squeeze(self.dynamic_parts[-1].mapFrom(self.dynamic_parts[-1].r).reshape(1,-1))
-            dpt[0][-3:-1] = endpoint[-3:-1]
-            #self.plot() #For debugging
-            dataset = np.append(dataset, dpt, axis=0)
+            values = {}
+            for part in self.dynamic_parts:
+                if part.dof.type == 'rule':
+                    values[part.name] = part.R_angle()[part.dof.axis]
+                else:
+                    values[part.name] = part.angle[part.dof.axis]
+            endpoint = np.squeeze(part.mapFrom(part.r))
+            values['X'] = endpoint[0]
+            values['Y'] = endpoint[1]
+            values['Z'] = endpoint[2]
+            if debug:
+                    self.plot()
+                    print(values)
+            self.db.insert(values)
 
         def generator(parts):
-            index = 0
+            index=0
             for part in parts:
-                if part.dof.type == 'rule':
+                if part.dof.type == 'rotation':
+                    range = np.linspace(part.dof.range[0], part.dof.range[1], resolution)
+                    for angle in range:
+                        part.rotate(part.dof.axis, angle)
+                        assert part.angle[part.dof.axis] == angle
+                        #print('rotated')
+                        if len(parts)-index > 1:
+                            generator(parts[index+1:])
+                        #reset
+                        part.reset()
+                elif part.dof.type == 'rule':
                     part.check_rule()
-                    break
-                range = np.linspace(part.dof.range[0], part.dof.range[1], resolution)
-                for angle in range:
-                    part.rotate(part.dof.axis, angle)
-                    if len(parts)-index > 1:
-                        generator(parts[1:])
+                    #print('rule checked', part.R_angle())
+
+                if len(parts) == 1:
                     add_data_point()
-                    #reset
                     part.reset()
-                index+=1
+                index += 1
+
         generator(self.dynamic_parts)
-        dataset = dataset[1:].astype(np.float64)
-        np.savetxt('training_data', dataset)
-        return dataset
+        return db_name
 
     def motionControl(self, target):
-        if not self.trained:
-            print('Arm must be trained first')
+        for key, part in self.parts.items():
+            part.reset()
+        if self.db == None:
+            print('Import or generate dataset')
             return
-        target = np.array(target).reshape(1,3)
-        angles = np.squeeze(self.model.predict(target))
-        for i in range(len(angles)):
-            part = self.dynamic_parts[i]
-            print(angles[i])
-            part.rotate(axis=part.dof.axis, angle=angles[i])
+        angles, delta = self.db.find_match(target)
+        print(angles)
+        db_keys = self.db.keys()
+        for key in db_keys:
+            if key not in self.parts.keys():
+                continue
+            i = db_keys.index(self.parts[key].name)
+            self.parts[key].rotate(self.parts[key].dof.axis, angles[i])
+        return delta
 
     def plot(self):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         for key, obj in self.parts.items():
             origin = np.squeeze(obj.ref_frame.mapFrom(obj.origin))
-            endpoint = np.squeeze(obj.mapFrom(obj.r))
+            endpoint = obj.mapFrom(obj.r)
             ax.plot(xs=(origin[0],endpoint[0]),
                     ys=(origin[1],endpoint[1]),
                     zs=(origin[2],endpoint[2]))
@@ -122,32 +176,41 @@ class Arm:
         else:
             self.parts[object.name] = object
 
-
 def armSetup():
     arm = Arm()
     base = Joint('base', (0,0,0))
-    shoulder = Joint('shoulder', (0,0,1))
+    shoulder = Joint('shoulder', (0,0,0.5))
     shoulder.attach(base)
-    shoulder.dynamic(type='rotation', axis='y', range=(-pi/3,pi/2))
-    elbow = Joint('elbow',(0.75,0,0))
+    shoulder.dynamic(type='rotation', axis='y', range=(-pi/2,pi/2))
+    elbow = Joint('elbow', (0,0,0.5))
     elbow.attach(shoulder)
     elbow.dynamic(type='rotation', axis='y', range=(-pi/2,pi/2))
-    wrist = Joint('wrist', (0.25,0,0))
+    wrist = Joint('wrist', (0,0,0.05))
     wrist.attach(elbow)
-    wrist.dynamic(type='rule', axis='y', rule=(0,0,-1))
-    wrist.check_rule()
-    wrist.reset()
+    wrist.dynamic(type='rotation', axis='y', range=(-pi/2,pi/2))
+    suction = Joint('suction', (0,0,0.1))
+    suction.attach(wrist)
+    suction.dynamic(type='rule', axis='y', rule=(0,0,-1))
+    # debug
+    def debug():
+        shoulder.rotate('y', 0.17453)
+        elbow.rotate('y', 1.570796)
+        wrist.rotate('y', 1.570796)
+        #suction.rotate('y', -0.1745)
+        suction.check_rule()
+        print(suction.R_angle())
     arm.add(base)
     arm.add(shoulder)
     arm.add(elbow)
     arm.add(wrist)
-
+    arm.add(suction)
+    #debug()
+    #arm.plot()
+    #exit()
     return arm
 
 arm = armSetup()
-training_data = arm.generateTraining(50)
-arm.learn(training_data)
-arm.motionControl((0.5,0,0.75))
-wrist = arm.parts['wrist']
-print(wrist.mapFrom(wrist.r))
+#arm.importDatabase('2019-10-07-205135.db')
+arm.generateDatabase(10, debug=False, memory=True)
+print(arm.motionControl((0.5,0,0.05)))
 arm.plot()

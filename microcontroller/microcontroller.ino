@@ -1,3 +1,6 @@
+#include <EEPROM.h>
+
+
 #define PORT_SPEED 115200
 #define MSG_SIZE 3
 
@@ -18,29 +21,18 @@
 #define SUCCESS 1
 #define FAILURE 0
 
-struct Servo {
-  int inputPin;
-  int analogPin;
-  int setPoint;
-};
+Servo servos[3];
 
-struct Stepper {
-  int inputPin;
-  int setPoint;
-};
-
-Servo servos[4];
-
-Stepper steppers[1];
+Stepper steppers[3];
 
 void setup() {
   Serial.begin(PORT_SPEED);
 
-  servos[SHOULDER].inputPin = 1;
+  servos[SHOULDER].inputPin = A1;
+  steppers[BASE].inputPin = A2;
   servos[SHOULDER].analogPin = 1;
   servos[SHOULDER].inputPin = 2;
   servos[SHOULDER].analogPin = 2;
-  servos[BASE].inputPin = 2;
 }
 
 void loop() {

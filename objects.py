@@ -130,7 +130,7 @@ class RefFrame:
         self.compute_transform()
 
     def translate(self, origin):
-        self.origin = origin
+        self.origin = np.asarray(origin).reshape(3,1)
 
 
 class Joint(RefFrame):
@@ -139,7 +139,6 @@ class Joint(RefFrame):
         #DOF=Degree of freedom. Used when calculating motion automatically
         self.dof = namedtuple('DoF', ['type', 'axis', 'range', 'r', 'fixed'])
         self.dof.fixed = True
-
         RefFrame.__init__(self, name)
 
     def backup(self):
@@ -203,6 +202,7 @@ class Joint(RefFrame):
         #kind of hacky, only to be used after solving rule for r
         Rxy = np.multiply(self.r, np.matrix("1;1;0"))
         Rxz = np.multiply(self.r, np.matrix("1;0;1"))
+        #print(Rxz)
         Ryz = np.multiply(self.r, np.matrix("0;1;1"))
         def calc_angle(a, b):
             a = a.transpose()
@@ -212,8 +212,8 @@ class Joint(RefFrame):
                 return 0
             dot = np.dot(a,b)
             # avoid multipying by zero to preserve sign
-            a[a==0]=1
-            sign = 1 if np.prod(a) > 0 else -1
+            #a[a==0]=1
+            sign = 1# if np.prod(a) > 0 else -1
             return sign * acos(dot/(a_mag*b_mag))
         angles = {}
         #angles['x'] = calc_angle(Ryz, np.matrix("0;0;1"))

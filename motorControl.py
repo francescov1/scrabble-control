@@ -22,6 +22,8 @@ class MSG(bytearray):
         return int(self[1]).to_bytes(1, 'little')
     def data(self):
         return self[2:]
+    def dataAsInt(self):
+        return int.from_bytes(resp.data(), 'little')
 
     class TYPE:
         HEARTBEAT = b'\x00'
@@ -138,6 +140,7 @@ class MCU:
     def set(self, id, value):
         msg = MSG(type=MSG.TYPE.SET, id=id, data=value)
         resp = self.__send(msg)
+        assert resp.type() == MSG.TYPE.ACK
 
     def status(self, id):
         msg = MSG(type=MSG.TYPE.STATUS, id=id)

@@ -34,32 +34,21 @@ union DataUnion {
 };
 
 byte errorFlag;
-//for use when no data is intened to be sent
-DataUnion empty;
 
 Motor motors[NUM_MOTORS];
 
 void setup() {
   errorFlag = SUCCESS;
-  empty.ui32 = 0;
   pinMode(LED, OUTPUT);
   digitalWrite(LED, HIGH);
   SPI.begin();
   Serial.begin(PORT_SPEED);
   //inputPin, outputPin, dirPin, errPin, slaveSelect
-  //inputPin, outputPin
-  //motors[BASE].init(1,22,24,23,25);
-  //motors[BASE].calibrate(CLOSED,
-  //motors[BASE].start(10, 32);
+  motors[BASE].init(1,22,24,23,25);
+  motors[BASE].calibrate(CLOSED, 0, 100);
+  motors[BASE].start(10, 32);
   motors[SUCTION].init(7);
   motors[SUCTION].calibrate(0, 180);
-  //DataUnion test;
-  //test.ui16[0] = 0;
-  //test.ui16[1] = 0;
-  //Serial.println(test.ui16[0]);
-  //Serial.println(test.ui16[1]);
-  //while (true) {
-  //}
 }
 
 void loop() {
@@ -75,17 +64,30 @@ void loop() {
     DataUnion response;
     switch (msgType) {
       case HEARTBEAT:
-        sendMsg(HEARTBEAT, errorFlag, empty);
+        response.ui32 = 0;
+        sendMsg(HEARTBEAT, errorFlag, response;
         break;
       case SET:
         motors[msgId].set(data.ui16[0]);
-        response.ui32 = SUCCESS;
+        response.ui32 = 0;
         sendMsg(ACK, msgId, response);
         break;
       case STATUS:
         response.ui16[0] = motors[msgId].latchedStatusFlags;
         response.ui16[1] = motors[msgId].nonLatchedStatusFlags;
         sendMsg(errorFlag, msgId, response);
+        break;
+      case GET:
+        switch (data.ui32) {
+          //setpoint
+          case 0:
+            response.ui32 = motors[msgId].setpoint;
+            break;
+          case 1:
+            response.f32 = motors[msgId].get_position();
+            break;
+        }
+        sendMsg(ACK, msgId, response);
         break;
     }
   }

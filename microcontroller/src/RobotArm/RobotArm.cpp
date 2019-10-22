@@ -49,13 +49,12 @@ void Motor::start(uint16_t milliamps, uint16_t stepmode) {
 	if (_type != STEPPER){
 		return;
 	}
-	_stepmode = stepmode;
 	digitalWrite(_outputPin, LOW);
 	digitalWrite(_dirPin, LOW);
 	delay(1);
 	_driver.resetSettings();
 	_driver.setCurrentMilliamps(milliamps);
-	_driver.setStepMode(_stepmode);
+	_driver.setStepMode(stepmode);
 	_driver.enableDriver();
 	disabled = false;
 }

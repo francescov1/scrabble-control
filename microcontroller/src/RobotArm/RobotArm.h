@@ -29,16 +29,17 @@ class Motor {
     void set(uint16_t value);
     bool update();
     void readErrors();
+    float get_position();
+
     uint16_t nonLatchedStatusFlags;
     uint16_t latchedStatusFlags;
     bool disabled;
     uint16_t setpoint;
 
   private:
-    float get_position();
     void step(int16_t target);
+    
     uint8_t _errPin;
-    uint8_t _motor_id;
     uint8_t _mode;
     uint16_t _minInput;
     uint16_t _maxInput;
@@ -49,7 +50,6 @@ class Motor {
     uint8_t _dirPin;
     uint8_t _outputPin;
     uint8_t _slaveSelect;
-    uint8_t _stepmode;
     float _Kp;
     float _Ki;
     AMIS30543 _driver;

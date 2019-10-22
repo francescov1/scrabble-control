@@ -5,6 +5,8 @@ from math import pi
 import numpy as np
 from time import time
 
+SERIAL_PORT = "COM4"
+
 def setupArm():
     arm = Arm()
     base = Joint('base', (0,0,2.28))
@@ -30,13 +32,13 @@ def setupArm():
     return arm
 
 arm = setupArm()
-#mcu = MCU(port='COM4')
+#arduino = MCU(port=SERIAL_PORT)
 
 bounding_box = ((0,float('Inf')), None, (0, float('Inf')))
-arm.generateDatabase(200, debug=False, memory=False, bounding_box=bounding_box)
+arm.generateDatabase(100, debug=False, memory=False, bounding_box=bounding_box)
 #arm.importDatabase('2019-10-09-191803.db')
-#print(arm.motionControl((10,0,5)))
-#arm.plot()
+print(arm.motionControl((10,0,5)))
+arm.plot()
 exit()
 for x in np.linspace(4, 30, 10):
     for z in np.linspace(0, 6, 10):

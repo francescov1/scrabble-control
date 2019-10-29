@@ -24,14 +24,26 @@ class MSG(bytearray):
         return self[2:]
     def dataAsInt(self):
         return int.from_bytes(resp.data(), 'little')
+    def dataEncode(self, value):
+        if type(value) == bytes:
+            self[-1] = int.from_bytes(value, 'little')
+        elif type(value) == int:
+            self[2:] = value.to_bytes(MSG.SIZE-2, 'little')
+        else:
+            print(type(value))
+            raise Exception('TypeError')
 
     class TYPE:
         HEARTBEAT = b'\x00'
         SET = b'\x01'
-        STATUS = b'\x02'
-        ERROR = b'\x03'
-        SUCCESS = b'\x04'
-        ACK = b'\x05'
+        GET = b'\x02'
+    class INFO:
+        STATUS = b'\x00'
+        ERROR = b'\x01'
+        SUCCESS = b'\x02'
+        ACK = b'\x03'
+        SETPOINT = b'\x04'
+        POSITION = b'\x05'
 
 class MCU:
     class MOTOR:
@@ -43,6 +55,7 @@ class MCU:
 
     nonLatchedStatusFlag = {
         0: 'NO FAULT',
+        1: 'POWER',
         (1 << 2):'OPENY',
         (1 << 3):'OPENX',
         (1 << 4):'WD',
@@ -52,6 +65,7 @@ class MCU:
 
     latchedStatusFlag = {
         0: 'NO FAULT',
+        1: 'POWER',
         (1 << 3):'OVCXNB',
         (1 << 4):'OVCXNT',
         (1 << 5):'OVCXPB',
@@ -86,7 +100,7 @@ class MCU:
                     i = 0
                 else:
                     self.active.clear()
-                if resp.id != MSG.TYPE.SUCCESS:
+                if resp.id != MSG.INFO.SUCCESS:
                     self.error.set()
                 else:
                     self.error.clear()
@@ -96,6 +110,7 @@ class MCU:
             self.heartbeat()
 
         t = Thread(target=run, args=(self,))
+        t.daemon = True
         t.start()
 
     def __open_serial(self, baudrate=115200, timeout=0, write_timeout=0):
@@ -140,15 +155,21 @@ class MCU:
     def set(self, id, value):
         msg = MSG(type=MSG.TYPE.SET, id=id, data=value)
         resp = self.__send(msg)
-        assert resp.type() == MSG.TYPE.ACK
+        assert resp.type() == MSG.INFO.ACK
+
+    def get(self, id, type):
+        msg = MSG(type=MSG.TYPE.SET, id=id)
+        msg.dataEncode(type)
+        resp = self.__send(msg)
+        assert resp.type() == MSG.INFO.ACK
 
     def status(self, id):
-        msg = MSG(type=MSG.TYPE.STATUS, id=id)
+        msg = MSG(type=MSG.TYPE.GET, id=id)
+        msg.dataEncode(MSG.INFO.STATUS)
         resp = self.__send(msg)
         if resp != None:
-            print(resp.data())
-            latched = int.from_bytes(resp.data()[0:1], 'little')
-            nonLatched = int.from_bytes(resp.data()[2:3], 'little')
+            latched = int.from_bytes(resp.data()[0:2], 'little')
+            nonLatched = int.from_bytes(resp.data()[2:4], 'little')
             latched = MCU.latchedStatusFlag[latched]
             nonLatched = MCU.nonLatchedStatusFlag[nonLatched]
             errorFlag = resp.type()
@@ -156,4 +177,5 @@ class MCU:
 
 if __name__ == '__main__':
     arduino = MCU("COM4")
-    print(arduino.status(MCU.MOTOR.SUCTION))
+    print(arduino.status(MCU.MOTOR.BASE))
+    exit()

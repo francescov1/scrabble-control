@@ -2,8 +2,13 @@
  * Seperate helper functions and static arm motor definitions
  * Calibration and setup of motors contained here
  */
- 
+
 void motorSetup(){
+  motors[BASE].init(22,23,25); //outputPin, errPin, slaveSelect
+  motors[BASE].start(132, 32); //milliamps, stepmode (for stepper only)
+  motors[BASE].set(90);
+
+  /*
   motors[BASE].init(22,23,25); //outputPin, errPin, slaveSelect
   motors[BASE].controller(0, 1000, 1.0, 1.0);  //min, max (chosen units), Ki, Kp
   motors[BASE].sensor.init(2,3); //inputpinA, inputpinB
@@ -11,7 +16,7 @@ void motorSetup(){
 
   motors[SHOULDER].init(10, 11, 12);
   motors[SHOULDER].controller(0, 180, 1.0, 1.0);
-  motors[SHOUDLER].sensor.init(A1);
+  motors[SHOULDER].sensor.init(A1);
   motors[SHOULDER].calibrate(0, 1023); //minSetpoint, maxSetpoint
   motors[SHOULDER].start(132, 32);
 
@@ -30,8 +35,19 @@ void motorSetup(){
   motors[SUCTION].init(19, 20, 30);
   motors[SUCTION].controller(0, 180, 1.0, 1.0);
   motors[SUCTION].sensor.init(A4);
-  motors[SUCTION].calibrate(0, 1023);
-  motors[SUCTION].start();
+  motors[SUCTION].sensor.calibrate(0, 1023);
+  motors[SUCTION].start();*/
+}
+
+static void buttonISR() {
+  suctionState = !suctionState;
+  if (suctionState) {
+    motors[SUCTION].set(180);
+  }
+  else {
+    motors[SUCTION].set(0);
+  }
+  delayMicroseconds(1000);
 }
 
 bool checkMsgBuffer(byte buffer[]) {

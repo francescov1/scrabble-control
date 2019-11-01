@@ -15,6 +15,8 @@ void setup() {
   digitalWrite(LED, HIGH);
   SPI.begin();
   Serial.begin(PORT_SPEED);
+  motorSetup();
+  attatchInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
 }
 
 void loop() {
@@ -43,9 +45,9 @@ void loop() {
         break;
       }
       case SET: {
-        motors[msgId].set(data.ui16[0]);
-        response.ui32 = 0;
-        sendMsg(ACK, msgId, response);
+        motors[msgId].set(data.ui32);
+        response.ui32 = data.ui32;
+        sendMsg(SET, msgId, response);
         break;
       }
       case GET: {
@@ -66,7 +68,7 @@ void loop() {
             break;
           }
         }
-        sendMsg(ACK, msgId, response);
+        sendMsg(GET, msgId, response);
         break;
       }
     }

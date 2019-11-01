@@ -6,29 +6,29 @@ import struct
 
 class MSG(bytearray):
     SIZE = 6  #*8 bit
-    def __init__(self,  source=None, type=None, id=None, data=None):
+    def __init__(self, source=None, msgType=None, id=None, data=None):
         if source == None:
             source = MSG.SIZE
         super().__init__(source)
-        if type != None:
-            self[0] = int.from_bytes(type, 'little')
+        if msgType != None:
+            self[0] = int.from_bytes(msgType, 'big')
         if id != None:
-            self[1] = int.from_bytes(id, 'little')
+            self[1] = int.from_bytes(id, 'big')
         if data != None:
-            self[2:] = data.to_bytes(MSG.SIZE-2, 'little')
+            self.dataEncode(data)
     def type(self):
-        return int(self[0]).to_bytes(1, 'little')
+        return int(self[0]).to_bytes(1, 'big')
     def id(self):
-        return int(self[1]).to_bytes(1, 'little')
+        return int(self[1]).to_bytes(1, 'big')
     def data(self):
         return self[2:]
     def dataAsInt(self):
-        return int.from_bytes(resp.data(), 'little')
+        return int.from_bytes(self.data(), 'big')
     def dataEncode(self, value):
         if type(value) == bytes:
-            self[-1] = int.from_bytes(value, 'little')
+            self[-1] = int.from_bytes(value, 'big')
         elif type(value) == int:
-            self[2:] = value.to_bytes(MSG.SIZE-2, 'little')
+            self[2:] = value.to_bytes(MSG.SIZE-2, 'big')
         else:
             print(type(value))
             raise Exception('TypeError')
@@ -93,7 +93,7 @@ class MCU:
             i = 0
             while i < 5:
                 i = i+1
-                msg = MSG(type=MSG.TYPE.HEARTBEAT)
+                msg = MSG(msgType=MSG.TYPE.HEARTBEAT)
                 resp = self.__send(msg)
                 if resp != None and  resp.type() == MSG.TYPE.HEARTBEAT:
                     self.active.set()
@@ -138,7 +138,7 @@ class MCU:
     def __send(self, msg, timeout=1):
         assert type(msg) == MSG
         with self.lock:
-            print("Sending: {}".format(msg))
+            #print("Sending: {}".format(msg))
             self.Serial.write(msg)
             start_time = time()
             while self.Serial.in_waiting < MSG.SIZE:
@@ -149,27 +149,27 @@ class MCU:
                 sleep(0.01)
             resp = self.Serial.read(size=self.Serial.in_waiting)
             resp = MSG(resp)
-            print("Received: {}".format(resp))
+            #print("Received: {}".format(resp))
             return resp
 
     def set(self, id, value):
-        msg = MSG(type=MSG.TYPE.SET, id=id, data=value)
+        msg = MSG(msgType=MSG.TYPE.SET, id=id, data=value)
         resp = self.__send(msg)
-        assert resp.type() == MSG.INFO.ACK
+        assert resp.type() == MSG.TYPE.SET
+        print(resp.data())
 
     def get(self, id, type):
-        msg = MSG(type=MSG.TYPE.SET, id=id)
-        msg.dataEncode(type)
+        msg = MSG(msgType=MSG.TYPE.GET, id=id, data=type)
         resp = self.__send(msg)
-        assert resp.type() == MSG.INFO.ACK
+        assert resp.type() == MSG.TYPE.GET
+        return resp.data()
 
     def status(self, id):
-        msg = MSG(type=MSG.TYPE.GET, id=id)
-        msg.dataEncode(MSG.INFO.STATUS)
+        msg = MSG(msgType=MSG.TYPE.GET, id=id, data=MSG.INFO.STATUS)
         resp = self.__send(msg)
         if resp != None:
-            latched = int.from_bytes(resp.data()[0:2], 'little')
-            nonLatched = int.from_bytes(resp.data()[2:4], 'little')
+            latched = int.from_bytes(resp.data()[0:2], 'big')
+            nonLatched = int.from_bytes(resp.data()[2:4], 'big')
             latched = MCU.latchedStatusFlag[latched]
             nonLatched = MCU.nonLatchedStatusFlag[nonLatched]
             errorFlag = resp.type()
@@ -177,5 +177,7 @@ class MCU:
 
 if __name__ == '__main__':
     arduino = MCU("COM4")
+    arduino.set(MCU.MOTOR.BASE, 10)
+    print(arduino.get(MCU.MOTOR.BASE, MSG.INFO.SETPOINT))
     print(arduino.status(MCU.MOTOR.BASE))
     exit()

@@ -3,7 +3,8 @@
  */
 
 #define PORT_SPEED 115200
-#define LED    13
+#define LED        13
+#define BUTTON     10
 
 //Definitions must match python
 #define MSG_SIZE    6  //num of bytes
@@ -41,3 +42,4 @@ union DataUnion {
 byte errorFlag;
 
 Motor motors[NUM_MOTORS];
+bool suctonState = false;

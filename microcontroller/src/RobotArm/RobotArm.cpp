@@ -1,11 +1,12 @@
 #include "Arduino.h"
 #include "RobotArm.h"
 
-#define MIN_STEPPER_DELAY  200
-#define MAX_STEPPER_DELAY  2000
-#define MIN_SERVO_DELAY    550
-#define MAX_SERVO_DELAY    2450
-#define SERVO_PERIOD       20000
+//units: microseconds
+#define MIN_STEPPER_DELAY  500
+#define MAX_STEPPER_DELAY  3000
+#define MIN_SERVO_DELAY    550000
+#define MAX_SERVO_DELAY    2450000
+#define SERVO_PERIOD       20000000
 
 
 Sensor* Sensor::sSensor = 0;
@@ -96,14 +97,16 @@ Motor::Motor()
 	disabled = true;
 	_mode = OPEN;
 	_type = 0;
+	_minOutput = 0;
+	_maxOutput = 100;
 }
 
 //STEPPER
 void Motor::init(uint8_t outputPin, uint8_t errPin=0, uint8_t slaveSelect=0)
 {
+	_outputPin = outputPin;
 	if (!errPin || !slaveSelect) {
 		_type = SERVO;
-		_outputPin = outputPin;
 		pinMode(_outputPin, OUTPUT);
 	}
 	else {
@@ -114,8 +117,8 @@ void Motor::init(uint8_t outputPin, uint8_t errPin=0, uint8_t slaveSelect=0)
 }
 
 void Motor::controller(uint16_t minOutput, uint16_t maxOutput, float Ki, float Kp) {
-	_maxOutput = minOutput;
-	_maxOutput = minOutput;
+	_minOutput = minOutput;
+	_maxOutput = maxOutput;
 	_Ki = Ki;
 	_Kp = Kp;
 	_mode = CLOSED;
@@ -144,13 +147,7 @@ void Motor::start(uint16_t milliamps=0, uint16_t stepmode=0) {
 }
 
 void Motor::set(uint16_t value) {
-	if (_minOutput >= _maxOutput) {
-		//ignore min/max (likely both defaulted to 0)
-		setpoint = value;
-	}
-	else {
-		setpoint = constrain(value, _minOutput, _maxOutput);
-	}
+	this->setpoint = constrain(value, _minOutput, _maxOutput);
 }
 
 int32_t Motor::position() {
@@ -177,7 +174,7 @@ bool Motor::update()
 		uint32_t time = millis();
 		_accumulatedError += error * (time - _lastStepTime - time);
 		int16_t target = _Kp * error + _Ki * _accumulatedError;
-		//step(target);
+		step(target);
 		return false;
 	}
 }
@@ -206,7 +203,7 @@ void Motor::read_errors()
 void Motor::step(int16_t target)
 {
 	// do not reset if motion disabled or if waiting to enforce speed
-	if (disabled || _delayTime+_lastStepTime < millis()) {
+	if (disabled || micros() < _delayTime + _lastStepTime) {
 		return;
 	}
 
@@ -216,7 +213,8 @@ void Motor::step(int16_t target)
 		if (_driver.getDirection() != direction) {
 			_driver.setDirection(direction);
 		}
-		// The NXT/STEP _minInputInputimum high pulse width is 2 microseconds.
+		Serial.println(_outputPin);
+		// The NXT/STEP minimum high pulse width is 2 microseconds.
 		digitalWrite(_outputPin, HIGH);
 		delayMicroseconds(3);
 		digitalWrite(_outputPin, LOW);
@@ -229,5 +227,5 @@ void Motor::step(int16_t target)
 		delayMicroseconds(pulse_time);
 		digitalWrite(_outputPin, LOW);
 	}
-	_lastStepTime = millis();
+	_lastStepTime = micros();
 }

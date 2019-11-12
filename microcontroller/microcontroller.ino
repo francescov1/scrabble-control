@@ -6,17 +6,29 @@
 
 #include <SPI.h>
 #include <AMIS30543.h>
+#include <SoftwareSerial.h>
 #include "src/RobotArm/RobotArm.h"
 #include "globals.h"
 
+SoftwareSerial SwSerial(2, 3);
+
 void setup() {
   errorFlag = SUCCESS;
+
   pinMode(LED, OUTPUT);
-  digitalWrite(LED, HIGH);
+  pinMode(BUTTON, INPUT);
+  pinMode(PWM_A, OUTPUT);
+  pinMode(AIN_1, OUTPUT);
+  pinMode(AIN_2, OUTPUT);
+
   SPI.begin();
-  Serial.begin(PORT_SPEED);
+  Serial.begin(115200); //Debug & FTDI port
+  SwSerial.begin(PORT_SPEED); //Control PC port
+
   motorSetup();
-  attatchInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
+
+  autoCalibrate(); //Zero base motor
 }
 
 void loop() {
@@ -27,6 +39,12 @@ void loop() {
       motors[i].update();
     }
   }
+
+  // Check suction buttton update flag (Set by ISR)
+  if (updateSuction) {
+    suctionControl();
+  }
+
   byte buffer[MSG_SIZE];
   if (checkMsgBuffer(buffer)) {
     byte msgType = buffer[0];

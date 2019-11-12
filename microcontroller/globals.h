@@ -5,6 +5,11 @@
 #define PORT_SPEED 115200
 #define LED        13
 #define BUTTON     10
+#define LIMIT      11
+
+#define PWM_A      12
+#define AIN_1      13
+#define AIN_2      14
 
 //Definitions must match python
 #define MSG_SIZE    6  //num of bytes
@@ -32,14 +37,15 @@
 union DataUnion {
   uint8_t ui8[4];
   uint16_t ui16[2];
-  int8_t si8[4];
-  int16_t si16[2];
+  int8_t i8[4];
+  int16_t i16[2];
   float f32;
-  int32_t;
+  int32_t i32;
   uint32_t ui32;
 };
 
 byte errorFlag;
 
 Motor motors[NUM_MOTORS];
-bool suctonState = false;
+bool suctionState = false;
+bool updateSuction = false;

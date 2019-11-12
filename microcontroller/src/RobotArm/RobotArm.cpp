@@ -18,35 +18,44 @@ Sensor::Sensor(){
 }
 
 void Sensor::zero() {
-	if (_type == DIGITAL) {
-		this->_value = 0;
+	if (type == ANALOG) {
+		return;
 	}
+	this->_value = 0;
 }
 
-void Sensor::calibrate(uint16_t minInput, uint16_t maxInput) {
+void Sensor::calibrate(int16_t minInput, int16_t maxInput) {
 	this->minInput = minInput;
 	this->maxInput = maxInput;
 }
 
-void Sensor::init(uint8_t inputPinA, uint8_t inputPinB=0) {
+void Sensor::init(uint8_t inputPinA=0, uint8_t inputPinB=0) {
 	_inputPinA = inputPinA;
-	pinMode(_inputPinA, INPUT);
 	_inputPinB = inputPinB;
-	if (_inputPinB == 0) {
-		_type = ANALOG;
-	} else {
-		_type = DIGITAL;
-		pinMode(_inputPinB, INPUT);
+	if (_inputPinA == 0 && _inputPinB == 0) {
+		type = COUNTER;
+	} else if(_inputPinA != 0 && _inputPinB == 0) {
+		type = ANALOG;
+	} else if(_inputPinA == 0 && _inputPinB != 0) {
+		type = ANALOG;
+		_inputPinA = _inputPinB;
+		_inputPinB = 0;
+	}
+	else {
+		type = DIGITAL;
 	}
 
-	switch (_type) {
+	switch (type) {
 		case DIGITAL: {
+			pinMode(_inputPinA, INPUT);
+			pinMode(_inputPinB, INPUT);
 			sSensor = this;
 			attachInterrupt(digitalPinToInterrupt(_inputPinA), Sensor::updateSensorISR, CHANGE);
 			attachInterrupt(digitalPinToInterrupt(_inputPinB), Sensor::updateSensorISR, CHANGE);
 			break;
 		}
 		case ANALOG:
+			pinMode(_inputPinA, INPUT);
 		break;
 	}
 }
@@ -57,7 +66,7 @@ void Sensor::updateSensorISR() {
 }
 
 void Sensor::update() {
-	switch(_type) {
+	switch(type) {
 		case ANALOG: {
 			uint8_t iterations = 3;
 			float average = 0;
@@ -80,11 +89,15 @@ void Sensor::update() {
 			}
 			break;
 		}
+		case COUNTER: {
+			// Nothing can be done here: must be updated from Motor::step function
+			break;
+		}
 	}
 }
 
 int32_t Sensor::read() {
-	if (_type==ANALOG) {
+	if (type==ANALOG) {
 		update();
 	}
 	return this->_value;
@@ -95,7 +108,6 @@ Motor::Motor()
 	nonLatchedStatusFlags = 0;
 	latchedStatusFlags = 0;
 	disabled = true;
-	_mode = OPEN;
 	_type = 0;
 	_minOutput = 0;
 	_maxOutput = 100;
@@ -121,14 +133,10 @@ void Motor::controller(uint16_t minOutput, uint16_t maxOutput, float Ki, float K
 	_maxOutput = maxOutput;
 	_Ki = Ki;
 	_Kp = Kp;
-	_mode = CLOSED;
 }
 
 //STEPPER
 void Motor::start(uint16_t milliamps=0, uint16_t stepmode=0) {
-	if (_mode!=OPEN && !sensor.initialized) {
-		return; //not ready to start, sensor not initialized
-	}
 	switch(_type){
 		case STEPPER: {
 			digitalWrite(_outputPin, LOW);
@@ -146,7 +154,7 @@ void Motor::start(uint16_t milliamps=0, uint16_t stepmode=0) {
 	}
 }
 
-void Motor::set(uint16_t value) {
+void Motor::set(int16_t value) {
 	this->setpoint = constrain(value, _minOutput, _maxOutput);
 }
 
@@ -157,7 +165,7 @@ int32_t Motor::position() {
 
 bool Motor::update()
 {
-	if (_mode == OPEN) {
+	if (sensor.type == OPEN) {
 		step(setpoint);
 		return false;
 	}
@@ -219,6 +227,9 @@ void Motor::step(int16_t target)
 		delayMicroseconds(3);
 		digitalWrite(_outputPin, LOW);
 		delayMicroseconds(3);
+		if (sensor.type == COUNTER) {
+			sensor._value += direction ? 1: -1;
+		}
 	}
 	else if (_type == SERVO) {
 		_delayTime = SERVO_PERIOD;

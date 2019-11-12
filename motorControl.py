@@ -1,4 +1,4 @@
-import serial
+MSGimport serial
 from queue import Queue
 from threading import Thread, RLock, Event
 from time import sleep, time
@@ -45,7 +45,6 @@ class MSG(bytearray):
         SETPOINT = b'\x04'
         POSITION = b'\x05'
 
-class MCU:
     class MOTOR:
         BASE = b'\x00'
         SHOULDER = b'\x01'
@@ -77,6 +76,7 @@ class MCU:
         (1 << 14):'OVCYPT'
        }
 
+class MCU:
     def __init__(self, port):
         self.port = port
         self.Serial = serial.Serial()
@@ -170,14 +170,14 @@ class MCU:
         if resp != None:
             latched = int.from_bytes(resp.data()[0:2], 'big')
             nonLatched = int.from_bytes(resp.data()[2:4], 'big')
-            latched = MCU.latchedStatusFlag[latched]
-            nonLatched = MCU.nonLatchedStatusFlag[nonLatched]
+            latched = MSG.latchedStatusFlag[latched]
+            nonLatched = MSG.nonLatchedStatusFlag[nonLatched]
             errorFlag = resp.type()
         return errorFlag, latched, nonLatched
 
 if __name__ == '__main__':
-    arduino = MCU("COM4")
-    arduino.set(MCU.MOTOR.BASE, 10)
-    print(arduino.get(MCU.MOTOR.BASE, MSG.INFO.SETPOINT))
-    print(arduino.status(MCU.MOTOR.BASE))
+    arduino = MSG("COM4")
+    arduino.set(MSG.MOTOR.BASE, 10)
+    print(arduino.get(MSG.MOTOR.BASE, MSG.INFO.SETPOINT))
+    print(arduino.status(MSG.MOTOR.BASE))
     exit()

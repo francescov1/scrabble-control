@@ -16,11 +16,13 @@ class Sensor {
 
     Sensor();
     void init(uint8_t inputPinA=0, uint8_t inputPinB=0);
-    void calibrate(int16_t minInput, int16_t maxInput);
+    void calibrate(int16_t minInput, int16_t maxInput, int16_t minReal, int16_t maxReal);
     int32_t read();
     void zero(); //for tareing sensor (digital mode only)
     int16_t minInput;
     int16_t maxInput;
+	int16_t minReal;
+    int16_t maxReal;
     int32_t _value; //access value using read(). Public for testing only
     uint8_t type;
   private:
@@ -33,20 +35,21 @@ class Sensor {
 
 class Motor {
   public:
-    #define STEPPER   1
-    #define SERVO     2
+    #define STEPPER        1
+    #define AMIS_STEPPER   2
+    #define SERVO          3
 
     Motor();
     Sensor sensor;
-    //stepper
-    void init(uint8_t outputPin, uint8_t errPin=0, uint8_t slaveSelect=0);
-    void start(uint16_t milliamps=0, uint16_t stepmode=0);
-    void controller(uint16_t minOutput, uint16_t maxOutput, float Ki, float Kp);
+    void init(uint8_t outputPin, uint8_t pin1=0, uint8_t pin2=0, uint8_t pin3=0, uint8_t pin4=0, uint8_t pin5=0, uint8_t pin6=0);
+    void start(uint16_t milliamps=0, uint16_t stepmode=1);
+    void controller(float Kp, float Ki);
     void set(int16_t value);
-    int32_t position(); //maps robot interpreted position to human readable
     bool update();
     void read_errors();
-
+    void manual_step(bool dir); //only for non AMIS stepper (rename later)
+	void amis_step(bool dir);  //for testing, bypasses control system
+	
     uint16_t nonLatchedStatusFlags;
     uint16_t latchedStatusFlags;
     bool disabled;
@@ -55,12 +58,27 @@ class Motor {
     AMIS30543 _driver;
 
   private:
-    void step(int16_t target);
+    void step(int32_t target);
+    // AMIS STEPPER
     uint8_t _errPin;
-    uint16_t _minOutput;
-    uint16_t _maxOutput;
+    uint8_t _dirPin;
+    int16_t _minOutput;
+    int16_t _maxOutput;
     uint8_t _outputPin;
     uint8_t _slaveSelect;
+    uint8_t _stepmode;
+
+    // MANUAL STEPPER
+    bool _coilADir;
+    bool _coilBDir;
+    uint8_t _stepCount; //Not to be used with PI control
+    uint8_t _a1;
+    uint8_t _a2;
+    uint8_t _b1;
+    uint8_t _b2;
+    uint8_t _pwmA;
+    uint8_t _pwmB;
+
     float _Kp;
     float _Ki;
     uint32_t _lastStepTime;

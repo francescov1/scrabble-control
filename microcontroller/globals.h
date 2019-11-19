@@ -2,6 +2,41 @@
  * Global macro and variable defintions
  */
 
+/* Shield pins
+  STEPPER 1:
+    STEP: 12
+    DIR: 11
+    DO: 50
+    DI: 51
+    CS: 48
+    ERR: 10
+
+  STEPPER 2:
+    STEP: 49
+    DIR: 40
+    DO: 50
+    DI: 51
+    CS: 46
+    ERR: 43
+
+  STEPPER 3:
+    PWM: 44
+    IN_1: 32
+    IN_2: 33
+    PWM: 45
+    IN_1: 30
+    IN_2: 31
+
+  SERVOS:
+    PWM: 2, 3
+
+  BUTTONS (DIGITAL):
+    PINS: 18, 19
+
+  POTENTIOMETERS:
+    PINS: A1, A2
+*/
+
 #define PORT_SPEED 115200
 #define LED        13
 #define BUTTON     10

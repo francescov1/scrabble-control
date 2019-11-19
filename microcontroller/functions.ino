@@ -4,31 +4,29 @@
  */
 
 void motorSetup(){
-  motors[BASE].init(9,23,25); //outputPin, errPin, slaveSelect
-  motors[BASE].controller(0, 1000, 1.0, 1.0);  //min, max (chosen units), Ki, Kp
-  motors[BASE].sensor.init(2,3); //inputpinA, inputpinB
-  motors[BASE].sensor.calibrate(0, 100); //minSetpoint, maxSetpoint
-  motors[BASE].start(132, 32); //milliamps, stepmode (for stepper only)
+  
+  motors[BASE].init(12, 10, 11, 48); //outputPin, errPin, dirPin, slaveSelect
+  motors[BASE].controller(2.0, 1.0);  //Kp, Ki
+  motors[BASE].sensor.init(); //inputpinA, inputpinB
+  motors[BASE].sensor.calibrate(0, 200*16, 0, 360); //minInput, maxInput, minReal, maxReal
+  motors[BASE].start(2000, 16); //milliamps, stepmode (for stepper only)
 
-  while(true){
-  }
+  motors[SHOULDER].init(49, 43, 40, 46);
+  motors[SHOULDER].controller(3.0, 1.0);
+  motors[SHOULDER].sensor.init();
+  motors[SHOULDER].sensor.calibrate(0, 20000*8*10, 0, 10);
+  //motors[BASE].start(2000, 8);
 
-  /*
-  motors[SHOULDER].init(10, 11, 12);
-  motors[SHOULDER].controller(0, 180, 1.0, 1.0);
-  motors[SHOULDER].sensor.init(A1);
-  motors[SHOULDER].sensor.calibrate(0, 1023);
-  motors[SHOULDER].start(132, 32);
-
-  motors[ELBOW].init(13, 14, 15);
+ /*
+  motors[ELBOW].init(44, 32, 33, 45, 30, 31);
   motors[ELBOW].controller(0, 180, 1.0, 1.0);
-  motors[ELBOW].sensor.init(A2);
-  motors[ELBOW].sensor.calibrate(0, 1023);
+  motors[ELBOW].sensor.init();
+  motors[ELBOW].sensor.calibrate(0, 180);
   motors[ELBOW].start();
-
-  motors[WRIST].init(16, 17, 18);
+  
+  motors[WRIST].init(2);
   motors[WRIST].controller(0, 180, 1.0, 1.0);
-  motors[WRIST].sensor.init(A3);
+  motors[WRIST].sensor.init(A1);
   motors[WRIST].sensor.calibrate(0, 1023);
   motors[WRIST].start();
   */
@@ -74,8 +72,8 @@ void suctionControl() {
 }
 
 bool checkMsgBuffer(byte buffer[]) {
-  if (SwSerial.available() == MSG_SIZE) {
-    SwSerial.readBytes(buffer, MSG_SIZE);
+  if (Serial.available() == MSG_SIZE) {
+    Serial.readBytes(buffer, MSG_SIZE);
     return true;
   }
   else {
@@ -94,5 +92,5 @@ void sendMsg(byte msgType, byte msgId, DataUnion data) {
   for (int i=0; i<sizeof(data.ui8); i++) {
     msg[i+2] = data.ui8[i];
   }
-  SwSerial.write(msg, MSG_SIZE);
+  Serial.write(msg, MSG_SIZE);
 }

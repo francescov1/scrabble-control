@@ -4,13 +4,11 @@
  * ENPH 454
  */
 
-#include <SPI.h>
-#include <AMIS30543.h>
-#include <SoftwareSerial.h>
+//#include <SoftwareSerial.h>
 #include "src/RobotArm/RobotArm.h"
 #include "globals.h"
 
-SoftwareSerial SwSerial(2, 3);
+//SoftwareSerial SwSerial(4, 5);
 
 void setup() {
   errorFlag = SUCCESS;
@@ -22,23 +20,32 @@ void setup() {
   pinMode(AIN_2, OUTPUT);
 
   SPI.begin();
-  Serial.begin(115200); //Debug & FTDI port
-  SwSerial.begin(PORT_SPEED); //Control PC port
-
+  Serial.begin(9600); //Debug & FTDI port
+  while(!Serial){};
+  //SwSerial.begin(PORT_SPEED); //Control PC port
+  Serial.println("Setup");
   motorSetup();
-  attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
+  motors[BASE].set(70);
+  //attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
 
-  autoCalibrate(); //Zero base motor
+  //autoCalibrate(); //Zero base motor
 }
 
 void loop() {
+  /*
   for (int i=0; i < NUM_MOTORS; i++) {
     motors[i].read_errors();
     if (!motors[i].disabled)
     {
       motors[i].update();
     }
-  }
+  }*/
+  //motors[BASE].read_errors();
+  motors[BASE].update();
+  //Serial.println(motors[BASE].sensor.read());
+  //motors[BASE].read_errors();
+  //motors[BASE].update();
+  return;
 
   // Check suction buttton update flag (Set by ISR)
   if (updateSuction) {
@@ -82,7 +89,7 @@ void loop() {
             break;
           }
           case POSITION: {
-            response.f32 = motors[msgId].position();
+            response.f32 = motors[msgId].sensor.read();
             break;
           }
         }

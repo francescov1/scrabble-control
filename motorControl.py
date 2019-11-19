@@ -176,7 +176,7 @@ class MCU:
         return errorFlag, latched, nonLatched
 
 if __name__ == '__main__':
-    arduino = MSG("COM4")
+    arduino = MCU("COM4")
     arduino.set(MSG.MOTOR.BASE, 10)
     print(arduino.get(MSG.MOTOR.BASE, MSG.INFO.SETPOINT))
     print(arduino.status(MSG.MOTOR.BASE))

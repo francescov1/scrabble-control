@@ -12,12 +12,8 @@
 
 void setup() {
   errorFlag = SUCCESS;
-
-  pinMode(LED, OUTPUT);
-  pinMode(BUTTON, INPUT);
-  pinMode(PWM_A, OUTPUT);
-  pinMode(AIN_1, OUTPUT);
-  pinMode(AIN_2, OUTPUT);
+  
+  pinSetup();
 
   SPI.begin();
   Serial.begin(9600); //Debug & FTDI port
@@ -25,7 +21,7 @@ void setup() {
   //SwSerial.begin(PORT_SPEED); //Control PC port
   Serial.println("Setup");
   motorSetup();
-  motors[BASE].set(70);
+  motors[WRIST].set(-80);
   //attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
 
   //autoCalibrate(); //Zero base motor
@@ -40,16 +36,12 @@ void loop() {
       motors[i].update();
     }
   }*/
-  //motors[BASE].read_errors();
-  motors[BASE].update();
-  //Serial.println(motors[BASE].sensor.read());
-  //motors[BASE].read_errors();
-  //motors[BASE].update();
+  motors[WRIST].update();
   return;
 
   // Check suction buttton update flag (Set by ISR)
   if (updateSuction) {
-    suctionControl();
+    //suctionControl();
   }
 
   byte buffer[MSG_SIZE];

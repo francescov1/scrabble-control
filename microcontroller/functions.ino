@@ -3,43 +3,50 @@
  * Calibration and setup of motors contained here
  */
 
-void motorSetup(){
+void pinSetup() {
+  pinMode(LED, OUTPUT);
   
+  pinMode(LIMIT_A, INPUT_PULLUP);
+  pinMode(LIMIT_B, INPUT_PULLUP);
+  pinMode(LIMIT_C, INPUT_PULLUP);
+}
+
+void motorSetup() {
+  /*
   motors[BASE].init(12, 10, 11, 48); //outputPin, errPin, dirPin, slaveSelect
   motors[BASE].controller(2.0, 1.0);  //Kp, Ki
   motors[BASE].sensor.init(); //inputpinA, inputpinB
   motors[BASE].sensor.calibrate(0, 200*16, 0, 360); //minInput, maxInput, minReal, maxReal
-  motors[BASE].start(2000, 16); //milliamps, stepmode (for stepper only)
+  motors[BASE].start(16, 2000); //stepmode, milliamps
 
   motors[SHOULDER].init(49, 43, 40, 46);
   motors[SHOULDER].controller(3.0, 1.0);
   motors[SHOULDER].sensor.init();
   motors[SHOULDER].sensor.calibrate(0, 20000*8*10, 0, 10);
-  //motors[BASE].start(2000, 8);
+  motors[SHOULDER].start(8, 2000);
 
- /*
   motors[ELBOW].init(44, 32, 33, 45, 30, 31);
   motors[ELBOW].controller(0, 180, 1.0, 1.0);
   motors[ELBOW].sensor.init();
   motors[ELBOW].sensor.calibrate(0, 180);
   motors[ELBOW].start();
-  
-  motors[WRIST].init(2);
-  motors[WRIST].controller(0, 180, 1.0, 1.0);
-  motors[WRIST].sensor.init(A1);
-  motors[WRIST].sensor.calibrate(0, 1023);
-  motors[WRIST].start();
   */
+  
+  motors[WRIST].init(3);
+  motors[WRIST].controller(0.5, 1.0);
+  motors[WRIST].sensor.init(A2);
+  motors[WRIST].sensor.calibrate(230, 830, -80, 80);
+  motors[WRIST].start();
 }
 
 void autoCalibrate() {
   motors[BASE].set(-1);
-  while (digitalRead(LIMIT) == LOW) {
+  while (digitalRead(LIMIT_A) == LOW) {
     motors[BASE].sensor.zero();
     motors[BASE].update();
   }
   motors[BASE]._driver.setStepMode(128);
-  while (digitalRead(LIMIT) == HIGH) {
+  while (digitalRead(LIMIT_A) == HIGH) {
     motors[BASE].set(motors[BASE].setpoint+1);
     motors[BASE].update();
   }
@@ -54,6 +61,7 @@ static void buttonISR() {
   }
 }
 
+/*
 void suctionControl() {
   if (suctionState) {
     digitalWrite(AIN_1, HIGH);
@@ -70,6 +78,7 @@ void suctionControl() {
   }
   updateSuction = false;
 }
+*/
 
 bool checkMsgBuffer(byte buffer[]) {
   if (Serial.available() == MSG_SIZE) {

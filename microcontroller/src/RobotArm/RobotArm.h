@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include "SPI.h"
 #include "AMIS30543.h"
+#include "Servo.h"
 
 //https://www.arduino.cc/en/Hacking/LibraryTutorial
 
@@ -40,15 +41,13 @@ class Motor {
     #define SERVO          3
 
     Motor();
-    Sensor sensor;
-    void init(uint8_t outputPin, uint8_t pin1=0, uint8_t pin2=0, uint8_t pin3=0, uint8_t pin4=0, uint8_t pin5=0, uint8_t pin6=0);
-    void start(uint16_t milliamps=0, uint16_t stepmode=1);
+    void init(uint8_t outputPin, uint8_t slaveSelect=0, uint8_t errPin=0, uint8_t dirPin=0, uint8_t slaPin=0);
+    void start(uint16_t stepmode=1, uint16_t milliamps=0);
     void controller(float Kp, float Ki);
     void set(int16_t value);
-    bool update();
+	bool update();
+	void step(bool dir); //for testing
     void read_errors();
-    void manual_step(bool dir); //only for non AMIS stepper (rename later)
-	void amis_step(bool dir);  //for testing, bypasses control system
 	
     uint16_t nonLatchedStatusFlags;
     uint16_t latchedStatusFlags;
@@ -56,28 +55,23 @@ class Motor {
     int16_t setpoint;
     uint8_t _type;
     AMIS30543 _driver;
+	Servo servo;
+	Sensor sensor;
 
   private:
-    void step(int32_t target);
     // AMIS STEPPER
     uint8_t _errPin;
     uint8_t _dirPin;
+	uint8_t _slaPin;
     int16_t _minOutput;
     int16_t _maxOutput;
     uint8_t _outputPin;
     uint8_t _slaveSelect;
     uint8_t _stepmode;
-
-    // MANUAL STEPPER
-    bool _coilADir;
-    bool _coilBDir;
-    uint8_t _stepCount; //Not to be used with PI control
-    uint8_t _a1;
-    uint8_t _a2;
-    uint8_t _b1;
-    uint8_t _b2;
-    uint8_t _pwmA;
-    uint8_t _pwmB;
+	// SERVO
+	uint16_t _minPulse;
+	uint16_t _maxPulse;
+	uint16_t _servoDelayTime;
 
     float _Kp;
     float _Ki;

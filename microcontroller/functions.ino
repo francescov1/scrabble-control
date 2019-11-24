@@ -12,31 +12,40 @@ void pinSetup() {
 }
 
 void motorSetup() {
-  /*
-  motors[BASE].init(12, 10, 11, 48); //outputPin, errPin, dirPin, slaveSelect
-  motors[BASE].controller(2.0, 1.0);  //Kp, Ki
-  motors[BASE].sensor.init(); //inputpinA, inputpinB
-  motors[BASE].sensor.calibrate(0, 200*16, 0, 360); //minInput, maxInput, minReal, maxReal
-  motors[BASE].start(16, 2000); //stepmode, milliamps
 
-  motors[SHOULDER].init(49, 43, 40, 46);
-  motors[SHOULDER].controller(3.0, 1.0);
+  //49, 46, 43, 48, A6
+  //12, 17, 10, 11, A7
+  
+  motors[BASE].init(12, 17, 10, 11, A7);
+  motors[BASE].controller(0.5, 1.0);
+  motors[BASE].sensor.init();
+  motors[BASE].sensor.calibrate(0, 5000, 0, 90);
+  motors[BASE].calibrate(200, 100);
+  motors[BASE].start(4, 2000);
+  Serial.println("BASE started");
+
+  motors[ELBOW].init(49, 46, 43, 48, A6); //uint8_t outputPin, uint8_t slaveSelect=0, uint8_t errPin=0, uint8_t dirPin=0, uint8_t slaPin=0
+  motors[ELBOW].controller(0.5, 1.0);  //Kp, Ki
+  motors[ELBOW].sensor.init(); //inputpinA, inputpinB
+  motors[ELBOW].sensor.calibrate(0, 100, 0, 90); //minInput, maxInput, minReal, maxReal
+  motors[ELBOW].calibrate(2000, 5000);
+  motors[ELBOW].start(16, 1500); //stepmode, milliamps
+  Serial.println("ELBOW started");
+  
+ /*
+  motors[SHOULDER].init();
+  motors[SHOULDER].controller(1.0, 1.0);
   motors[SHOULDER].sensor.init();
-  motors[SHOULDER].sensor.calibrate(0, 20000*8*10, 0, 10);
-  motors[SHOULDER].start(8, 2000);
-
-  motors[ELBOW].init(44, 32, 33, 45, 30, 31);
-  motors[ELBOW].controller(0, 180, 1.0, 1.0);
-  motors[ELBOW].sensor.init();
-  motors[ELBOW].sensor.calibrate(0, 180);
-  motors[ELBOW].start();
-  */
+  motors[SHOULDER].sensor.calibrate(0, 200*8*2, 0, 180);
+  motors[SHOULDER].start(8, 3000);
   
   motors[WRIST].init(3);
   motors[WRIST].controller(0.5, 1.0);
+  motors[WRIST].calibrate(750, 2300);
   motors[WRIST].sensor.init(A2);
-  motors[WRIST].sensor.calibrate(230, 830, -80, 80);
+  motors[WRIST].sensor.calibrate(230, 830, 0, 180);
   motors[WRIST].start();
+  */
 }
 
 void autoCalibrate() {

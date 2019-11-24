@@ -8,13 +8,13 @@
     DIR: 11
     DO: 50
     DI: 51
-    CS: 48
+    CS: 17
     ERR: 10
     SLA: A7
 
   STEPPER 2:
     STEP: 49
-    DIR: 40
+    DIR: 48
     DO: 50
     DI: 51
     CS: 46

@@ -17,13 +17,13 @@ class Sensor {
 
     Sensor();
     void init(uint8_t inputPinA=0, uint8_t inputPinB=0);
-    void calibrate(int16_t minInput, int16_t maxInput, int16_t minReal, int16_t maxReal);
+    void calibrate(int32_t minInput, int32_t maxInput, int32_t minReal, int32_t maxReal);
     int32_t read();
     void zero(); //for tareing sensor (digital mode only)
-    int16_t minInput;
-    int16_t maxInput;
-	int16_t minReal;
-    int16_t maxReal;
+    int32_t minInput;
+    int32_t maxInput;
+	int32_t minReal;
+    int32_t maxReal;
     int32_t _value; //access value using read(). Public for testing only
     uint8_t type;
   private:
@@ -37,21 +37,23 @@ class Sensor {
 class Motor {
   public:
     #define STEPPER        1
-    #define AMIS_STEPPER   2
-    #define SERVO          3
+    #define SERVO          2
 
     Motor();
     void init(uint8_t outputPin, uint8_t slaveSelect=0, uint8_t errPin=0, uint8_t dirPin=0, uint8_t slaPin=0);
     void start(uint16_t stepmode=1, uint16_t milliamps=0);
     void controller(float Kp, float Ki);
+	// for servo
+	void calibrate(uint16_t minPulse, uint16_t maxPulse);
     void set(int16_t value);
-	bool update();
+	void update();
 	void step(bool dir); //for testing
     void read_errors();
 	
     uint16_t nonLatchedStatusFlags;
     uint16_t latchedStatusFlags;
     bool disabled;
+	bool moving;
     int16_t setpoint;
     uint8_t _type;
     AMIS30543 _driver;

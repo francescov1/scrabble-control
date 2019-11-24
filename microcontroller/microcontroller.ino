@@ -5,38 +5,44 @@
  */
 
 //#include <SoftwareSerial.h>
+#include <SPI.h>
+#include <AMIS30543.h>
 #include "src/RobotArm/RobotArm.h"
 #include "globals.h"
 
 //SoftwareSerial SwSerial(4, 5);
 
+int setpoint = 0;
+bool dir = true;
+
 void setup() {
   errorFlag = SUCCESS;
-  
-  pinSetup();
+ 
 
   SPI.begin();
   Serial.begin(9600); //Debug & FTDI port
   while(!Serial){};
   //SwSerial.begin(PORT_SPEED); //Control PC port
-  Serial.println("Setup");
+  Serial.println("Setup"); 
   motorSetup();
-  motors[WRIST].set(-80);
-  //attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
 
+  //pinSetup();
+  //attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
   //autoCalibrate(); //Zero base motor
 }
 
 void loop() {
-  /*
-  for (int i=0; i < NUM_MOTORS; i++) {
+  for (int i=0;i < NUM_MOTORS;i++) {
     motors[i].read_errors();
-    if (!motors[i].disabled)
-    {
-      motors[i].update();
+    motors[i].update();
+    if (!motors[i].moving) {
+      if (motors[i].setpoint == 0) {
+        motors[i].set(40);
+      } else {
+        motors[i].set(0);
+      }
     }
-  }*/
-  motors[WRIST].update();
+  }
   return;
 
   // Check suction buttton update flag (Set by ISR)

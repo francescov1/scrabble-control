@@ -8,6 +8,7 @@
     DIR: 11
     DO: 50
     DI: 51
+    CLK:
     CS: 17
     ERR: 10
     SLA: A7
@@ -17,21 +18,29 @@
     DIR: 48
     DO: 50
     DI: 51
+    CLK:
     CS: 46
     ERR: 43
     SLA: A6
 
   STEPPER 3:
-    PWM: 44
-    IN_1: 32
-    IN_2: 33
-    
-    PWM: 45
-    IN_1: 30
-    IN_2: 31
+    STEP: 22
+    DIR: N/A
+    DO: 50
+    DI: 51
+    CLK:
+    CS: 21
+    ERR: 23
+    SLA: A5
 
   SERVOS:
     PWM: 2, 3
+
+  DC MOTORS:
+    STBY: 27
+    A1, A2: 30, 31
+    B1, B2: 32, 33
+    PWMA, PWMB: 44, 45 
 
   BUTTONS (DIGITAL):
     PINS (w/ 5V): 18, 19
@@ -49,6 +58,17 @@
 #define LIMIT_A    14
 #define LIMIT_B    15
 #define LIMIT_C    16
+#define BUTTON     18
+#define POT_A      A2
+#define POT_B      A1
+
+#define AIN_1      30
+#define AIN_2      31
+#define BIN_1      32
+#define BIN_2      33
+#define STBY       27
+#define PWM_A      45
+#define PWM_B      44
 
 //Definitions must match python
 #define MSG_SIZE    6  //num of bytes
@@ -72,6 +92,8 @@
 #define SUCTION     4
 
 #define NUM_MOTORS  5
+
+SoftwareSerial SwSerial(14, 15);
 
 union DataUnion {
   uint8_t ui8[4];

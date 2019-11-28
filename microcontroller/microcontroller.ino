@@ -10,10 +10,6 @@
 #include "src/RobotArm/RobotArm.h"
 #include "globals.h"
 
-//SoftwareSerial SwSerial(4, 5);
-
-int setpoint = 0;
-bool dir = true;
 
 void setup() {
   errorFlag = SUCCESS;
@@ -22,28 +18,23 @@ void setup() {
   SPI.begin();
   Serial.begin(9600); //Debug & FTDI port
   while(!Serial){};
-  //SwSerial.begin(PORT_SPEED); //Control PC port
+  SwSerial.begin(PORT_SPEED); //Control PC port
   Serial.println("Setup"); 
+  pinSetup();
+  
   motorSetup();
-
-  //pinSetup();
-  //attachInterrupt(digitalPinToInterrupt(BUTTON), buttonISR, RISING);
-  //autoCalibrate(); //Zero base motor
+  autoCalibrate(); //Zero base motors
 }
 
 void loop() {
-  for (int i=0;i < NUM_MOTORS;i++) {
-    motors[i].read_errors();
-    motors[i].update();
-    if (!motors[i].moving) {
-      if (motors[i].setpoint == 0) {
-        motors[i].set(40);
-      } else {
-        motors[i].set(0);
-      }
-    }
-  }
   return;
+  
+  for (int i=0;i < NUM_MOTORS;i++) {
+    motors[i].update();
+  }
+  if (updateSuction) {
+    suctionControl();
+  }
 
   // Check suction buttton update flag (Set by ISR)
   if (updateSuction) {

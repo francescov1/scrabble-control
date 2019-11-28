@@ -65,41 +65,29 @@ void Sensor::updateSensorISR() {
 }
 
 void Sensor::update() {
-	switch(type) {
-		case ANALOG: {
-			uint8_t iterations = 3;
-			float average = 0;
-			for (int i=0; i<iterations; i++) {
-				average += analogRead(_inputPinA);
-				delayMicroseconds(10);
-			}
-			average = average / iterations;
-			this->_value = average;
-			break;
+	if (type==ANALOG) {
+		this->_value = analogRead(_inputPinA);
+	}
+	else if(type==DIGITAL){
+		bool A_state = digitalRead(_inputPinA);
+		bool B_state = digitalRead(_inputPinB);
+		if (A_state == B_state) {
+			this->_value++;
 		}
-		case DIGITAL: {
-			bool A_state = digitalRead(_inputPinA);
-			bool B_state = digitalRead(_inputPinB);
-			if (A_state == B_state) {
-				this->_value++;
-			}
-			else {
-				this->_value--;
-			}
-			break;
+		else {
+			this->_value--;
 		}
-		case COUNTER: {
+	}
+	else{
 			// Nothing can be done here: must be updated from Motor::step function
-			break;
-		}
 	}
 }
 
 int32_t Sensor::read() {
 	if (type==ANALOG) {
-		update();
+		this->update();
 	}
-	return _value;
+	return this->_value;
 }
 
 Motor::Motor()
@@ -152,11 +140,12 @@ void Motor::start(uint16_t stepmode=1, uint16_t milliamps=0) {
 		_driver.setStepMode(_stepmode);
 		_driver.enableDriver();
 		delay(1);
+		this->read_errors();
 	} else if (_type == SERVO) {
 		servo.attach(_outputPin);
 		disabled = false;
 	} else {
-		Serial.println("motor type not defined");
+		Serial.println("Motor type not defined");
 	}
 }
 
@@ -183,6 +172,7 @@ void Motor::read_errors()
 	} else {
 		latchedStatusFlags = 0;
 	}
+
 	bool power = true;
 	if (!_driver.verifySettings()) {
 		_driver.applySettings();
@@ -217,26 +207,31 @@ void Motor::step(bool dir) {
     delayMicroseconds(3);
 }
 
-void Motor::update() {
+bool Motor::update() {
+	read_errors();
+	if (disabled) {
+		return false;
+	}
 	if (((uint16_t)(micros() - _lastStepTime) < _delayTime)) {
-		//Serial.println(micros() - _lastStepTime);
-		return;
+		return false;
 	}
 	_lastStepTime = micros();
 	// PI control implemented here
 	uint32_t mSetpoint = map(setpoint, sensor.minReal, sensor.maxReal, sensor.minInput, sensor.maxInput);
-	int32_t error = sensor.read() - (mSetpoint*_stepmode);
-	//Serial.println(error);
+	if (sensor.type==COUNTER) {
+		mSetpoint = mSetpoint*_stepmode;
+	}
+	int32_t error = sensor.read() - mSetpoint;
 	// reset and return if setpoint acheived
 	if (error == 0) {
 		_accumulatedError = 0;
 		moving = false;
-		return;
+		return true;
 	} else {
 		moving = true;
 	}
 	
-	uint32_t time = micros();
+	//uint32_t time = micros();
 	//_accumulatedError += error * ((time - _lastStepTime)*1e-7);
 	int32_t target = _Kp * error; //+ _Ki * _accumulatedError;
 	target = constrain(target, MIN_TARGET, MAX_TARGET);
@@ -269,4 +264,5 @@ void Motor::update() {
 	else {
 		Serial.println("Unknown motor type");
 	}
+	return false;
 }

@@ -44,48 +44,53 @@ void loop() {
   if (checkMsgBuffer(buffer)) {
     byte msgType = buffer[0];
     byte msgId = buffer[1];
-
+    
     DataUnion data;
+    Serial.println("\nMsg received: ");
+    Serial.print(msgType);
+    Serial.print(msgId);
     for (int i=0; i<sizeof(data.ui8); i++) {
       data.ui8[i] = buffer[i+2];
+      Serial.print(data.ui8[i]);
     }
 
     DataUnion response;
     switch (msgType) {
-      case HEARTBEAT: {
+      case HEARTBEAT:
         response.ui32 = 0;
         sendMsg(HEARTBEAT, errorFlag, response);
         break;
-      }
-      case SET: {
+        
+      case SET:
         motors[msgId].set(data.i32);
         response.i32 = data.i32;
         sendMsg(SET, msgId, response);
         Serial.println("Setting motor");
         break;
-      }
-      case GET: {
-        switch (data.ui32) {
+        
+      case GET:
+        switch (msgId) {
           //STATUS
-          case STATUS: {
+          case STATUS:
             response.ui16[0] = motors[msgId].latchedStatusFlags;
             response.ui16[1] = motors[msgId].nonLatchedStatusFlags;
+            Serial.println("status");
             break;
-          }
+            
           //setpoint
-          case SETPOINT: {
-            response.i32 = motors[msgId].setpoint;
-            Serial.println(response.i32);
+          case SETPOINT:
+            response.i32 = (int32_t)(motors[msgId].setpoint);
+            Serial.println("setpoint");
             break;
-          }
-          case POSITION: {
-            response.f32 = motors[msgId].sensor.read();
+          
+          case POSITION:
+            response.i32 = (int32_t)(motors[msgId].sensor.read());
+            Serial.println("position");
             break;
-          }
         }
+        Serial.println(response.i32);
         sendMsg(GET, msgId, response);
         break;
-      }
     }
   }
 }

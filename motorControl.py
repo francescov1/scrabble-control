@@ -1,4 +1,4 @@
-MSGimport serial
+import serial
 from queue import Queue
 from threading import Thread, RLock, Event
 from time import sleep, time
@@ -86,7 +86,7 @@ class MCU:
         self.error = Event()
 
         # Start
-        self.heartbeat()
+        #self.heartbeat()
 
     def heartbeat(self):
         def run(self):
@@ -121,7 +121,7 @@ class MCU:
             self.Serial.timeout = timeout
             self.Serial.write_timeout = write_timeout
             self.Serial.open()
-            sleep(1)
+            sleep(2)
         self.lock.release()
 
     def __close_serial(self):
@@ -135,7 +135,7 @@ class MCU:
         sleep(0.1)
         self.__open_serial()
 
-    def __send(self, msg, timeout=1):
+    def __send(self, msg, timeout=2):
         assert type(msg) == MSG
         with self.lock:
             #print("Sending: {}".format(msg))
@@ -146,7 +146,7 @@ class MCU:
                     print("Response timed out")
                     print("Buffer: {}".format(self.Serial.read(size=self.Serial.in_waiting)))
                     return None #timeout condition
-                sleep(0.01)
+                sleep(0.1)
             resp = self.Serial.read(size=self.Serial.in_waiting)
             resp = MSG(resp)
             #print("Received: {}".format(resp))
@@ -162,7 +162,7 @@ class MCU:
         msg = MSG(msgType=MSG.TYPE.GET, id=id, data=type)
         resp = self.__send(msg)
         assert resp.type() == MSG.TYPE.GET
-        return resp.data()
+        return resp
 
     def status(self, id):
         msg = MSG(msgType=MSG.TYPE.GET, id=id, data=MSG.INFO.STATUS)

@@ -137,8 +137,8 @@ void suctionControl() {
 }
 
 bool checkMsgBuffer(byte buffer[]) {
-  if (Serial1.available() == MSG_SIZE) {
-    Serial1.readBytes(buffer, MSG_SIZE);
+  if (Serial.available() == MSG_SIZE) {
+    Serial.readBytes(buffer, MSG_SIZE);
     return true;
   }
   else {
@@ -157,5 +157,5 @@ void sendMsg(byte msgType, byte msgId, DataUnion data) {
   for (int i=0; i<sizeof(data.ui8); i++) {
     msg[i+2] = data.ui8[i];
   }
-  Serial1.write(msg, MSG_SIZE);
+  Serial.write(msg, MSG_SIZE);
 }

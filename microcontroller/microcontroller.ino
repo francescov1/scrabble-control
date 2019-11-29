@@ -21,12 +21,12 @@ void setup() {
 
   while(!Serial || !Serial1){}
   
-  Serial.println("Setup"); 
   //test();
-  pinSetup();
+  //pinSetup();
   
-  motorSetup();
+  //motorSetup();
   //autoCalibrate(); //Zero base motors
+  Serial.println("Done setup");
 }
 
 void loop() {

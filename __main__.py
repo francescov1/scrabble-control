@@ -3,16 +3,17 @@ from motorControl import MCU, MSG
 from math import pi
 
 from keyboard import add_hotkey
+import keyboard
 
 try:
-    from picamera import PiCamera
+    from picamera import PiCamera as camera
     from RPi.GPIO import GPIO
 except:
     print("Failed to import picam and/or GPIO. Will continue.")
 
 from time import time, sleep
 
-SERIAL_PORT = "COM4"
+SERIAL_PORT = "/dev/ttyAMA0"
 
 def buttonCallback(channel):
     pass
@@ -55,9 +56,12 @@ def manual():
     arduino = MCU(port=SERIAL_PORT)
     def move(motor, dir):
         sp = arduino.get(motor, MSG.INFO.SETPOINT)
-        sp += dir
-        arduino.set(motor, sp)
-
+        print(sp)
+        #sp += dir
+        #print("Setting M{} to {}".format(motor, sp))
+        #arduino.set(motor, sp)
+    
+    print("Ready for manual control")
     add_hotkey('b+up', move, args=[MSG.MOTOR.BASE, 1])
     add_hotkey('s+up', move, args=[MSG.MOTOR.SHOULDER, 1])
     add_hotkey('e+up', move, args=[MSG.MOTOR.ELBOW, 1])
@@ -66,6 +70,7 @@ def manual():
     add_hotkey('s+down', move, args=[MSG.MOTOR.SHOULDER, -1])
     add_hotkey('e+down', move, args=[MSG.MOTOR.ELBOW, -1])
     add_hotkey('w+down', move, args=[MSG.MOTOR.WRIST, -1])
+    keyboard.wait('esc')
 
 def main():
     arm = setupArm()
@@ -75,9 +80,9 @@ def main():
     #arm.importDatabase('2019-10-09-191803.db')
     angles, delta = arm.motionControl((10,0,5))
     arm.plot()
-
-    #camera.capture(path)
+    setupCamera()
+    camera.capture(path)
 
 
 if __name__ == '__main__':
-    main()
+    manual()

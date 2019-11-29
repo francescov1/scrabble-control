@@ -3,7 +3,13 @@
  * Calibration and setup of motors contained here
  */
 
-void pinSetup() {
+void test() {
+  while(true) {
+    Serial.println(analogRead(POT_A));
+  }
+}
+
+void pinSetup() {  
   pinMode(LED, OUTPUT);
   
   pinMode(LIMIT_A, INPUT_PULLUP);
@@ -65,7 +71,7 @@ void motorSetup() {
 }
 
 void autoCalibrate() {
-  motors[SHOULDER].set(20);
+  motors[SHOULDER].set(10);
   while(!motors[SHOULDER].update()){};
   delay(1000);
   
@@ -88,7 +94,7 @@ void autoCalibrate() {
 
   motors[SHOULDER].set(90);
   motors[ELBOW].set(-20);
-  while(!motors[SHOULDER].update() && !motors[SHOULDER].update()){};
+  while(!motors[SHOULDER].update() && !motors[ELBOW].update()){}
   delay(1000);
   
   motors[BASE].set(1000);
@@ -131,8 +137,8 @@ void suctionControl() {
 }
 
 bool checkMsgBuffer(byte buffer[]) {
-  if (SwSerial.available() == MSG_SIZE) {
-    SwSerial.readBytes(buffer, MSG_SIZE);
+  if (Serial1.available() == MSG_SIZE) {
+    Serial1.readBytes(buffer, MSG_SIZE);
     return true;
   }
   else {
@@ -151,5 +157,5 @@ void sendMsg(byte msgType, byte msgId, DataUnion data) {
   for (int i=0; i<sizeof(data.ui8); i++) {
     msg[i+2] = data.ui8[i];
   }
-  SwSerial.write(msg, MSG_SIZE);
+  Serial1.write(msg, MSG_SIZE);
 }

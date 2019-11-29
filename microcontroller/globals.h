@@ -93,8 +93,6 @@
 
 #define NUM_MOTORS  5
 
-SoftwareSerial SwSerial(14, 15);
-
 union DataUnion {
   uint8_t ui8[4];
   uint16_t ui16[2];

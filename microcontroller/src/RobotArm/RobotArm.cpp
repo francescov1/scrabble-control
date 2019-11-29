@@ -208,7 +208,7 @@ void Motor::step(bool dir) {
 }
 
 bool Motor::update() {
-	read_errors();
+	//read_errors();
 	if (disabled) {
 		return false;
 	}
@@ -222,6 +222,7 @@ bool Motor::update() {
 		mSetpoint = mSetpoint*_stepmode;
 	}
 	int32_t error = sensor.read() - mSetpoint;
+	//Serial.println(error);
 	// reset and return if setpoint acheived
 	if (error == 0) {
 		_accumulatedError = 0;

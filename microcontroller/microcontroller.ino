@@ -7,38 +7,37 @@
 //#include <SoftwareSerial.h>
 #include <SPI.h>
 #include <AMIS30543.h>
+#include <SoftwareSerial.h>
 #include "src/RobotArm/RobotArm.h"
 #include "globals.h"
 
 
 void setup() {
   errorFlag = SUCCESS;
- 
 
   SPI.begin();
   Serial.begin(9600); //Debug & FTDI port
-  while(!Serial){};
-  SwSerial.begin(PORT_SPEED); //Control PC port
+  Serial1.begin(PORT_SPEED); //Control PC port
+
+  while(!Serial || !Serial1){}
+  
   Serial.println("Setup"); 
+  //test();
   pinSetup();
   
   motorSetup();
-  autoCalibrate(); //Zero base motors
+  //autoCalibrate(); //Zero base motors
 }
 
 void loop() {
-  return;
-  
+    
   for (int i=0;i < NUM_MOTORS;i++) {
     motors[i].update();
-  }
-  if (updateSuction) {
-    suctionControl();
   }
 
   // Check suction buttton update flag (Set by ISR)
   if (updateSuction) {
-    //suctionControl();
+    suctionControl();
   }
 
   byte buffer[MSG_SIZE];
@@ -59,9 +58,10 @@ void loop() {
         break;
       }
       case SET: {
-        motors[msgId].set(data.ui32);
-        response.ui32 = data.ui32;
+        motors[msgId].set(data.i32);
+        response.i32 = data.i32;
         sendMsg(SET, msgId, response);
+        Serial.println("Setting motor");
         break;
       }
       case GET: {
@@ -74,7 +74,8 @@ void loop() {
           }
           //setpoint
           case SETPOINT: {
-            response.ui32 = motors[msgId].setpoint;
+            response.i32 = motors[msgId].setpoint;
+            Serial.println(response.i32);
             break;
           }
           case POSITION: {

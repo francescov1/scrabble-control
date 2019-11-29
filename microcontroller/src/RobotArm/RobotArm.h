@@ -36,8 +36,8 @@ class Sensor {
 
 class Motor {
   public:
-    #define STEPPER        1
-    #define SERVO          2
+    #define STEPPER     1
+    #define SERVO       2
 
     Motor();
     void init(uint8_t outputPin, uint8_t slaveSelect=0, uint8_t errPin=0, uint8_t dirPin=0, uint8_t slaPin=0);
@@ -46,7 +46,7 @@ class Motor {
 	// for servo
 	void calibrate(uint16_t minPulse, uint16_t maxPulse);
     void set(int16_t value);
-	void update();
+	bool update();
 	void step(bool dir); //for testing
     void read_errors();
 	

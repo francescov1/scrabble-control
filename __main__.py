@@ -1,6 +1,8 @@
 from armSim import Arm, Joint
-from motorControl import MCU
+from motorControl import MCU, MSG
 from math import pi
+
+from keyboard import add_hotkey
 
 try:
     from picamera import PiCamera as camera
@@ -16,7 +18,7 @@ def buttonCallback(channel):
     pass
 
 def setupGpio():
-    GPIO.setmode(GPIO.BOARD)  
+    GPIO.setmode(GPIO.BOARD)
 
 def setupCamera():
     camera.resolution = (2592, 1944)
@@ -49,9 +51,24 @@ def setupArm():
     return arm
 
 
+def manual():
+    arduino = MCU(port=SERIAL_PORT)
+    def move(motor, dir):
+        sp = arduino.get(motor, MSG.INFO.SETPOINT)
+        sp += dir
+        arduino.set(motor, sp)
+
+    add_hotkey('b+up', move, args=[MSG.MOTOR.BASE, 1])
+    add_hotkey('s+up', move, args=[MSG.MOTOR.SHOULDER, 1])
+    add_hotkey('e+up', move, args=[MSG.MOTOR.ELBOW, 1])
+    add_hotkey('w+up', move, args=[MSG.MOTOR.WRIST, 1])
+    add_hotkey('b+down', move, args=[MSG.MOTOR.BASE, -1])
+    add_hotkey('s+down', move, args=[MSG.MOTOR.SHOULDER, -1])
+    add_hotkey('e+down', move, args=[MSG.MOTOR.ELBOW, -1])
+    add_hotkey('w+down', move, args=[MSG.MOTOR.WRIST, -1])
+
 def main():
     arm = setupArm()
-    arduino = MCU(port=SERIAL_PORT)
 
     bounding_box = ((0, float('Inf')), None, (0, float('Inf')))
     arm.generateDatabase(100, debug=False, memory=False, bounding_box=bounding_box)

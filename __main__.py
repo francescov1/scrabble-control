@@ -3,7 +3,7 @@ from motorControl import MCU
 from math import pi
 
 try:
-    from picamera import PiCamera
+    from picamera import PiCamera as camera
     from RPi.GPIO import GPIO
 except:
     print("Failed to import picam and/or GPIO. Will continue.")
@@ -58,8 +58,8 @@ def main():
     #arm.importDatabase('2019-10-09-191803.db')
     angles, delta = arm.motionControl((10,0,5))
     arm.plot()
-
-    #camera.capture(path)
+    setupCamera()
+    camera.capture(path)
 
 
 if __name__ == '__main__':

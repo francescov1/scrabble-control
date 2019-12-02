@@ -46,7 +46,7 @@ void motorSetup() {
   motors[ELBOW].init(49, 46, 43, 48, A6); //uint8_t outputPin, uint8_t slaveSelect=0, uint8_t errPin=0, uint8_t dirPin=0, uint8_t slaPin=0
   motors[ELBOW].controller(0.5, 1.0);  //Kp, Ki
   motors[ELBOW].sensor.init(POT_A); //inputpinA, inputpinB
-  motors[ELBOW].sensor.calibrate(53, 550, -70, 80); //minInput, maxInput, minReal, maxReal
+  motors[ELBOW].sensor.calibrate(53, 550, 20, 170); //minInput, maxInput, minReal, maxReal
   motors[ELBOW].calibrate(6000, 9000);
   motors[ELBOW].start(16, 1800); //stepmode, milliamps
   Serial.println("ELBOW started");

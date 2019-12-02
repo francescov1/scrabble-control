@@ -21,7 +21,7 @@ void Sensor::zero() {
 	this->_value = 0;
 }
 
-void Sensor::calibrate(int32_t minInput, int32_t maxInput, int32_t minReal, int32_t maxReal) {
+void Sensor::calibrate(uint32_t minInput, uint32_t maxInput, uint32_t minReal, uint32_t maxReal) {
 	this->minInput = minInput;
 	this->maxInput = maxInput;
 	this->minReal = minReal;
@@ -149,7 +149,7 @@ void Motor::start(uint16_t stepmode=1, uint16_t milliamps=0) {
 	}
 }
 
-void Motor::set(int16_t value) {
+void Motor::set(uint32_t value) {
 	this->setpoint = constrain(value, sensor.minReal, sensor.maxReal);
 }
 
@@ -193,6 +193,7 @@ void Motor::read_errors()
 }
 
 void Motor::step(bool dir) {
+	Serial.println("Step");
 	if (_type != STEPPER) {
 		Serial.println("Can't step on non-stepper");
 		return;

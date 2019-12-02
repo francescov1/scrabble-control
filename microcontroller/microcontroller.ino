@@ -24,7 +24,7 @@ void setup() {
   Serial.println("Setup"); 
   //test();
   pinSetup();
-  
+
   motorSetup();
   //autoCalibrate(); //Zero base motors
 }
@@ -46,13 +46,18 @@ void loop() {
     byte msgId = buffer[1];
     
     DataUnion data;
-    Serial.println("\nMsg received: ");
-    Serial.print(msgType);
-    Serial.print(msgId);
+    //Serial.println("Msg received: ");
+    //Serial.print(msgType);
+    //Serial.print(msgId);
     for (int i=0; i<sizeof(data.ui8); i++) {
-      data.ui8[i] = buffer[i+2];
-      Serial.print(data.ui8[i]);
+      //Serial.println(buffer[i+2]);
+      //Serial.println(sizeof(data.ui8)-i-1);
+      data.ui8[sizeof(data.ui8)-i-1] = buffer[i+2];
     }
+    /*
+    for (int i=0; i<sizeof(data.ui8); i++) {
+      Serial.println(data.ui8[i]);
+    }*/
 
     DataUnion response;
     switch (msgType) {
@@ -62,33 +67,34 @@ void loop() {
         break;
         
       case SET:
-        motors[msgId].set(data.i32);
-        response.i32 = data.i32;
+        Serial.println("SET");
+        motors[msgId].set(data.ui32);
+        Serial.println(data.ui32);
+        response.ui32 = data.ui32;
         sendMsg(SET, msgId, response);
-        Serial.println("Setting motor");
         break;
         
       case GET:
-        switch (msgId) {
+        Serial.println("GET");
+        switch (data.ui32) {
           //STATUS
           case STATUS:
             response.ui16[0] = motors[msgId].latchedStatusFlags;
             response.ui16[1] = motors[msgId].nonLatchedStatusFlags;
-            Serial.println("status");
+            //Serial.println("status");
             break;
             
           //setpoint
           case SETPOINT:
-            response.i32 = (int32_t)(motors[msgId].setpoint);
-            Serial.println("setpoint");
+            response.ui32 = (int32_t)(motors[msgId].setpoint);
+            //Serial.println("setpoint");
             break;
           
           case POSITION:
-            response.i32 = (int32_t)(motors[msgId].sensor.read());
-            Serial.println("position");
+            response.ui32 = (int32_t)(motors[msgId].sensor.read());
+            //Serial.println("position");
             break;
         }
-        Serial.println(response.i32);
         sendMsg(GET, msgId, response);
         break;
     }

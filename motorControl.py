@@ -2,7 +2,7 @@ import serial
 from queue import Queue
 from threading import Thread, RLock, Event
 from time import sleep, time
-import struct
+from struct import pack, unpack
 
 class MSG(bytearray):
     SIZE = 6  #*8 bit
@@ -15,7 +15,7 @@ class MSG(bytearray):
         if id != None:
             self[1] = int.from_bytes(id, 'big')
         if data != None:
-            self.dataEncode(data)
+            self.dataEncode(data);
     def type(self):
         return int(self[0]).to_bytes(1, 'big')
     def id(self):
@@ -23,12 +23,13 @@ class MSG(bytearray):
     def data(self):
         return self[2:]
     def dataAsInt(self):
-        return int.from_bytes(self.data(), 'big')
+        return unpack('<l', self[2:])[0]
+        #return int.from_bytes(self.data(), 'big')
     def dataEncode(self, value):
         if type(value) == bytes:
             self[-1] = int.from_bytes(value, 'big')
         elif type(value) == int:
-            self[2:] = value.to_bytes(MSG.SIZE-2, 'big')
+            self[2:] = pack('>l', value)
         else:
             print(type(value))
             raise Exception('TypeError')
@@ -154,12 +155,14 @@ class MCU:
 
     def set(self, id, value):
         msg = MSG(msgType=MSG.TYPE.SET, id=id, data=value)
+        #print(msg)
         resp = self.__send(msg)
         assert resp.type() == MSG.TYPE.SET
-        print(resp.data())
+        return resp
 
     def get(self, id, type):
         msg = MSG(msgType=MSG.TYPE.GET, id=id, data=type)
+        #print(msg)
         resp = self.__send(msg)
         assert resp.type() == MSG.TYPE.GET
         return resp
@@ -176,8 +179,7 @@ class MCU:
         return errorFlag, latched, nonLatched
 
 if __name__ == '__main__':
-    arduino = MCU("COM4")
-    arduino.set(MSG.MOTOR.BASE, 10)
-    print(arduino.get(MSG.MOTOR.BASE, MSG.INFO.SETPOINT))
-    print(arduino.status(MSG.MOTOR.BASE))
+    arduino = MCU("/dev/ttyAMA0")
+    arduino.set(MSG.MOTOR.BASE, 1)
+    print(arduino.get(MSG.MOTOR.BASE, MSG.INFO.SETPOINT).dataAsInt())
     exit()

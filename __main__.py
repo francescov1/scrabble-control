@@ -55,11 +55,11 @@ def setupArm():
 def manual():
     arduino = MCU(port=SERIAL_PORT)
     def move(motor, dir):
-        sp = arduino.get(motor, MSG.INFO.SETPOINT)
-        print(sp)
-        #sp += dir
-        #print("Setting M{} to {}".format(motor, sp))
-        #arduino.set(motor, sp)
+        sp = arduino.get(motor, MSG.INFO.SETPOINT).dataAsInt()
+        #print(sp)
+        sp += dir
+        print("Setting M{} to {}".format(motor, sp))
+        arduino.set(motor, sp)
     
     print("Ready for manual control")
     add_hotkey('b+up', move, args=[MSG.MOTOR.BASE, 1])

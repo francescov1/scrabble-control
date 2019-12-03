@@ -180,6 +180,5 @@ class MCU:
 
 if __name__ == '__main__':
     arduino = MCU("/dev/ttyAMA0")
-    arduino.set(MSG.MOTOR.BASE, 1)
-    print(arduino.get(MSG.MOTOR.BASE, MSG.INFO.SETPOINT).dataAsInt())
+    arduino.set(MSG.MOTOR.SHOULDER, 90)
     exit()

@@ -1,6 +1,5 @@
 /*
  * Scrabble Robot
- * Matt Duke, Fall 2019
  * ENPH 454
  */
 
@@ -20,25 +19,29 @@ void setup() {
   Serial1.begin(PORT_SPEED); //Control PC port
 
   while(!Serial || !Serial1){}
-  
-  Serial.println("Setup"); 
-  //test();
-  pinSetup();
 
+  pinSetup();
+  
   motorSetup();
-  //autoCalibrate(); //Zero base motors
+  /*motors[WRIST].set(80);
+  while (true) {
+    motors[WRIST].update();
+  }*/
+  //test();
+
+  autoCalibrate(); //Zero base motors
+  Serial.println("Done setup");
 }
 
 void loop() {
     
   for (int i=0;i < NUM_MOTORS;i++) {
     motors[i].update();
+    //delay(1000);
   }
 
   // Check suction buttton update flag (Set by ISR)
-  if (updateSuction) {
-    suctionControl();
-  }
+  //suctionControl();
 
   byte buffer[MSG_SIZE];
   if (checkMsgBuffer(buffer)) {
@@ -68,6 +71,11 @@ void loop() {
         
       case SET:
         Serial.println("SET");
+        if (msgId == SUCTION) {
+          Serial.println("suction");
+          suctionState = !suctionState;
+          suctionControl();
+        }
         motors[msgId].set(data.ui32);
         Serial.println(data.ui32);
         response.ui32 = data.ui32;

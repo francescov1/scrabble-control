@@ -29,15 +29,15 @@ def setupCamera():
 
 def setupArm():
     arm = Arm()
-    base = Joint('base', (0,0,2.28))
+    base = Joint('base', (0,0,62))
     base.dynamic('translation', axis='y')
-    shoulder = Joint('shoulder', (0,0,10))
+    shoulder = Joint('shoulder', (231,0,0))
     shoulder.attach(base)
-    shoulder.dynamic(type='rotation', axis='y', range=(-pi/2,pi/2))
-    elbow = Joint('elbow', (0,0,12))
+    shoulder.dynamic(type='rotation', axis='y', range=(0,pi/2))
+    elbow = Joint('elbow', (207,0,0))
     elbow.attach(shoulder)
-    elbow.dynamic(type='rotation', axis='y', range=(-pi,pi))
-    wrist = Joint('wrist', (0,0,2))
+    elbow.dynamic(type='rotation', axis='y', range=(-pi,0))
+    wrist = Joint('wrist', (82,0,0))
     wrist.attach(elbow)
     wrist.dynamic('rule', axis='y', rule=(0,0,-1))
     #shoulder.rotate('y', 1.507)
@@ -56,33 +56,60 @@ def manual():
     arduino = MCU(port=SERIAL_PORT)
     def move(motor, dir):
         sp = arduino.get(motor, MSG.INFO.SETPOINT).dataAsInt()
-        #print(sp)
-        sp += dir
+        sp += dir * 2
+        if sp < 0:
+            sp == 0
         print("Setting M{} to {}".format(motor, sp))
         arduino.set(motor, sp)
     
+    def suction():
+        arduino.set(MSG.MOTOR.SUCTION, 0)
+    
     print("Ready for manual control")
-    add_hotkey('b+up', move, args=[MSG.MOTOR.BASE, 1])
+    add_hotkey('right', move, args=[MSG.MOTOR.BASE, 1])
     add_hotkey('s+up', move, args=[MSG.MOTOR.SHOULDER, 1])
     add_hotkey('e+up', move, args=[MSG.MOTOR.ELBOW, 1])
     add_hotkey('w+up', move, args=[MSG.MOTOR.WRIST, 1])
-    add_hotkey('b+down', move, args=[MSG.MOTOR.BASE, -1])
+    add_hotkey('left', move, args=[MSG.MOTOR.BASE, -1])
     add_hotkey('s+down', move, args=[MSG.MOTOR.SHOULDER, -1])
     add_hotkey('e+down', move, args=[MSG.MOTOR.ELBOW, -1])
     add_hotkey('w+down', move, args=[MSG.MOTOR.WRIST, -1])
+    add_hotkey('space', suction)
     keyboard.wait('esc')
 
+
+def commandMotors(arduino, arm, endpoint):
+    x = endpoint[0]
+    y = endpoint[1]
+    z = endpoint[2]
+    
+    target = (y, 0, z)
+    angles, delta = arm.motionControl(target)
+
+    arduino.set(MSG.MOTOR.BASE, x)
+    motorMap = [MSG.MOTOR.SHOULDER, MSG.MOTOR.ELBOW, MSG.MOTOR.WRIST]
+    offset = [0, pi, -pi/2]
+    for i in range(len(motorMap)):
+        angle = int((angles[i] + offset[i]) * 180/pi)
+        if angle < 0:
+            angle = 0
+        print(angle)
+        arduino.set(motorMap[i], angle)
+        #print(arduino.get(motorMap[i], MSG.SETPOINT))
+    
+
 def main():
+    arduino = MCU(port=SERIAL_PORT)
     arm = setupArm()
 
-    bounding_box = ((0, float('Inf')), None, (0, float('Inf')))
-    arm.generateDatabase(100, debug=False, memory=False, bounding_box=bounding_box)
-    #arm.importDatabase('2019-10-09-191803.db')
-    angles, delta = arm.motionControl((10,0,5))
-    arm.plot()
-    setupCamera()
-    camera.capture(path)
-
+    bounding_box = ((0, float('Inf')), (0, float('Inf')), (0, float('Inf')))
+    #print("generating db");
+    #arm.generateDatabase(50, debug=False, memory=False, bounding_box=bounding_box)
+    #exit()
+    arm.importDatabase('main.db')
+    #arm.plot()
+    commandMotors(arduino, arm, (50, 286, 5))
 
 if __name__ == '__main__':
+    #main()
     manual()

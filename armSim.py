@@ -43,7 +43,7 @@ class Database:
         col = ','.join(col)
         filter = '('
         i = 0
-        step_size = 2
+        step_size = 5
         for axis in ['X','Y','Z']:
             filter += '({} BETWEEN {} AND {})'.format(axis, target[i]-step_size, target[i]+step_size)
             i += 1
@@ -192,7 +192,7 @@ class Arm:
         last_part = self.parts[self.db.keys()[-4]]
         r = last_part.mapFrom(last_part.r)
         delta = sqrt((target[0]-r[0])**2+(target[1]-r[1])**2+(target[2]-r[2])**2)
-        assert abs(db_delta-delta) < 1
+        #assert abs(db_delta-delta) < 1
         return angles, delta
 
     def plot(self):
@@ -205,10 +205,10 @@ class Arm:
                     ys=(origin[1],endpoint[1]),
                     zs=(origin[2],endpoint[2]))
 
-        lim = [-500,500]
-        ax.set_xlim([0, max(lim)])
-        ax.set_ylim([0, max(lim)])
-        ax.set_zlim([0, max(lim)])
+        #lim = [-200,200]
+        #ax.set_xlim(lim)
+        #ax.set_ylim(lim)
+        #ax.set_zlim([0, max(lim)])
 
         ax.set_xlabel(r'$X$')
         ax.set_ylabel(r'$Y$')

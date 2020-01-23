@@ -17,13 +17,13 @@ class Sensor {
 
     Sensor();
     void init(uint8_t inputPinA=0, uint8_t inputPinB=0);
-    void calibrate(int32_t minInput, int32_t maxInput, int32_t minReal, int32_t maxReal);
+    void calibrate(uint32_t minInput, uint32_t maxInput, uint32_t minReal, uint32_t maxReal);
     int32_t read();
     void zero(); //for tareing sensor (digital mode only)
-    int32_t minInput;
-    int32_t maxInput;
-	int32_t minReal;
-    int32_t maxReal;
+    uint32_t minInput;
+    uint32_t maxInput;
+    uint32_t minReal;
+    uint32_t maxReal;
     int32_t _value; //access value using read(). Public for testing only
     uint8_t type;
   private:
@@ -43,11 +43,11 @@ class Motor {
     void init(uint8_t outputPin, uint8_t slaveSelect=0, uint8_t errPin=0, uint8_t dirPin=0, uint8_t slaPin=0);
     void start(uint16_t stepmode=1, uint16_t milliamps=0);
     void controller(float Kp, float Ki);
-	// for servo
-	void calibrate(uint16_t minPulse, uint16_t maxPulse);
-    void set(int16_t value);
-	bool update();
-	void step(bool dir); //for testing
+    // for servo
+    void calibrate(uint16_t minPulse, uint16_t maxPulse);
+    void set(uint32_t value);
+    bool update();
+    void step(bool dir); //for testing
     void read_errors();
 	
     uint16_t nonLatchedStatusFlags;

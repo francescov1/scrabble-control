@@ -58,7 +58,7 @@
 #define LIMIT_A    14
 #define LIMIT_B    15
 #define LIMIT_C    16
-#define BUTTON     18
+#define BUTTON     A13
 #define POT_A      A2
 #define POT_B      A1
 
@@ -97,9 +97,6 @@ union DataUnion {
   uint8_t ui8[4];
   uint16_t ui16[2];
   int8_t i8[4];
-  int16_t i16[2];
-  float f32;
-  int32_t i32;
   uint32_t ui32;
 };
 
@@ -108,3 +105,4 @@ byte errorFlag;
 Motor motors[NUM_MOTORS];
 bool suctionState = false;
 bool updateSuction = false;
+bool buttonState = false;

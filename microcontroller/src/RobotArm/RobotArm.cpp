@@ -21,7 +21,7 @@ void Sensor::zero() {
 	this->_value = 0;
 }
 
-void Sensor::calibrate(int32_t minInput, int32_t maxInput, int32_t minReal, int32_t maxReal) {
+void Sensor::calibrate(uint32_t minInput, uint32_t maxInput, uint32_t minReal, uint32_t maxReal) {
 	this->minInput = minInput;
 	this->maxInput = maxInput;
 	this->minReal = minReal;
@@ -147,9 +147,10 @@ void Motor::start(uint16_t stepmode=1, uint16_t milliamps=0) {
 	} else {
 		Serial.println("Motor type not defined");
 	}
+	set(sensor.minReal);
 }
 
-void Motor::set(int16_t value) {
+void Motor::set(uint32_t value) {
 	this->setpoint = constrain(value, sensor.minReal, sensor.maxReal);
 }
 
@@ -193,12 +194,13 @@ void Motor::read_errors()
 }
 
 void Motor::step(bool dir) {
+	//Serial.println("Step");
 	if (_type != STEPPER) {
 		Serial.println("Can't step on non-stepper");
 		return;
 	}
 	if (dir != _driver.getDirection()) {
-		Serial.println("Changing direction");
+		//Serial.println("Changing direction");
 		_driver.setDirection(dir);
 	}
 	digitalWrite(_outputPin, HIGH);
@@ -216,13 +218,34 @@ bool Motor::update() {
 		return false;
 	}
 	_lastStepTime = micros();
-	// PI control implemented here
+	
+	if (_type == SERVO) {
+		/*
+		uint16_t setpointPulse = map(setpoint, sensor.minReal, sensor.maxReal, _minPulse, _maxPulse);
+		uint16_t currentPulse = map(sensor.read(), sensor.minInput, sensor.maxInput, _minPulse, _maxPulse);
+		uint16_t pulse_time;
+		if (direction) {
+			pulse_time = map(abs(target), 0, MAX_TARGET, currentPulse, setpointPulse);
+		} else {
+			pulse_time = map(abs(target), MAX_TARGET, 0, currentPulse, setpointPulse);
+		}
+		Serial.println(target);
+		*/
+		uint16_t pulse_time = map(setpoint, sensor.minReal, sensor.maxReal, _minPulse, _maxPulse);
+		//Serial.println(pulse_time);
+		servo.writeMicroseconds(pulse_time);
+		sensor._value = setpoint;
+		_delayTime = 1000;
+	}
 	uint32_t mSetpoint = map(setpoint, sensor.minReal, sensor.maxReal, sensor.minInput, sensor.maxInput);
-	if (sensor.type==COUNTER) {
+	if (sensor.type==COUNTER && _type==STEPPER) {
 		mSetpoint = mSetpoint*_stepmode;
 	}
 	int32_t error = sensor.read() - mSetpoint;
-	//Serial.println(error);
+	
+	//Serial.println(sensor.read());
+	//Serial.println(mSetpoint);
+	
 	// reset and return if setpoint acheived
 	if (error == 0) {
 		_accumulatedError = 0;
@@ -245,22 +268,6 @@ bool Motor::update() {
 		if (sensor.type == COUNTER) {
 			sensor._value += direction ? 1 : -1;
 		}
-	}
-	else if (_type == SERVO) {
-		/*
-		uint16_t setpointPulse = map(setpoint, sensor.minReal, sensor.maxReal, _minPulse, _maxPulse);
-		uint16_t currentPulse = map(sensor.read(), sensor.minInput, sensor.maxInput, _minPulse, _maxPulse);
-		uint16_t pulse_time;
-		if (direction) {
-			pulse_time = map(abs(target), 0, MAX_TARGET, currentPulse, setpointPulse);
-		} else {
-			pulse_time = map(abs(target), MAX_TARGET, 0, currentPulse, setpointPulse);
-		}
-		Serial.println(target);
-		*/
-		uint16_t pulse_time = map(setpoint, sensor.minReal, sensor.maxReal, _minPulse, _maxPulse);
-		servo.writeMicroseconds(mSetpoint);
-		_delayTime = 10000;
 	}
 	else {
 		Serial.println("Unknown motor type");

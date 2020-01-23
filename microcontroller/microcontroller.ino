@@ -1,6 +1,5 @@
 /*
  * Scrabble Robot
- * Matt Duke, Fall 2019
  * ENPH 454
  */
 
@@ -20,75 +19,91 @@ void setup() {
   Serial1.begin(PORT_SPEED); //Control PC port
 
   while(!Serial || !Serial1){}
-  
+
+  pinSetup();
+
+  motorSetup();
+  /*motors[WRIST].set(80);
+  while (true) {
+    motors[WRIST].update();
+  }*/
   //test();
-  //pinSetup();
-  
-  //motorSetup();
-  //autoCalibrate(); //Zero base motors
-  //Serial.println("Done setup");
+
+  autoCalibrate(); //Zero base motors
+  Serial.println("Done setup");
 }
 
 void loop() {
-    
+
   for (int i=0;i < NUM_MOTORS;i++) {
     motors[i].update();
+    //delay(1000);
   }
 
   // Check suction buttton update flag (Set by ISR)
-  if (updateSuction) {
-    suctionControl();
-  }
+  //suctionControl();
 
   byte buffer[MSG_SIZE];
   if (checkMsgBuffer(buffer)) {
     byte msgType = buffer[0];
     byte msgId = buffer[1];
-    
+
     DataUnion data;
-    //Serial.println("\nMsg received: ");
+
+    //Serial.println("Msg received: ");
     //Serial.print(msgType);
     //Serial.print(msgId);
     for (int i=0; i<sizeof(data.ui8); i++) {
-      data.ui8[i] = buffer[i+2];
-      //Serial.print(data.ui8[i]);
+      //Serial.println(buffer[i+2]);
+      //Serial.println(sizeof(data.ui8)-i-1);
+      data.ui8[sizeof(data.ui8)-i-1] = buffer[i+2];
     }
-    
+    /*
+    for (int i=0; i<sizeof(data.ui8); i++) {
+      Serial.println(data.ui8[i]);
+    }*/
+
     DataUnion response;
     switch (msgType) {
       case HEARTBEAT:
         response.ui32 = 0;
         sendMsg(HEARTBEAT, errorFlag, response);
         break;
-        
+
       case SET:
-        motors[msgId].set(data.i32);
-        response.i32 = data.i32;
+        Serial.println("SET");
+        if (msgId == SUCTION) {
+          Serial.println("suction");
+          suctionState = !suctionState;
+          suctionControl();
+        }
+        motors[msgId].set(data.ui32);
+        Serial.println(data.ui32);
+        response.ui32 = data.ui32;
         sendMsg(SET, msgId, response);
-        //Serial.println("Setting motor");
         break;
-        
+
       case GET:
-        switch (msgId) {
+        Serial.println("GET");
+        switch (data.ui32) {
           //STATUS
           case STATUS:
             response.ui16[0] = motors[msgId].latchedStatusFlags;
             response.ui16[1] = motors[msgId].nonLatchedStatusFlags;
             //Serial.println("status");
             break;
-            
+
           //setpoint
           case SETPOINT:
-            response.ui32 = (uint32_t)(motors[msgId].setpoint);
+            response.ui32 = (int32_t)(motors[msgId].setpoint);
             //Serial.println("setpoint");
             break;
-          
+
           case POSITION:
-            response.i32 = (int32_t)(motors[msgId].sensor.read());
+            response.ui32 = (int32_t)(motors[msgId].sensor.read());
             //Serial.println("position");
             break;
         }
-        //Serial.println(response.i32);
         sendMsg(GET, msgId, response);
         break;
     }

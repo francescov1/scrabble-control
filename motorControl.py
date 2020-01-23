@@ -2,7 +2,7 @@ import serial
 from queue import Queue
 from threading import Thread, RLock, Event
 from time import sleep, time
-import struct
+from struct import pack, unpack
 
 class MSG(bytearray):
     SIZE = 6  #*8 bit
@@ -149,7 +149,7 @@ class MCU:
                 sleep(0.1)
             resp = self.Serial.read(size=self.Serial.in_waiting)
             resp = MSG(resp)
-            #print("Received: {}".format(resp))
+            print("Received: {}".format(resp))
             return resp
 
     def set(self, id, value):

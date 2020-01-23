@@ -80,6 +80,7 @@ class Arm:
         self.parts = {}
         self.dynamic_parts = []
         self.db = None
+        self.img_save_count = 0
 
     def importDatabase(self, file):
         self.db = Database(file)
@@ -96,14 +97,14 @@ class Arm:
                     bounding_box[i] = default_bounds
             bounding_box = tuple(bounding_box)
 
-        if memory:
+        if bool(memory) or memory == None:
             db_name = ':memory:'
         else:
             now = datetime.now()
             db_name = now.strftime("%Y-%m-%d-%H%M%S")+".db"
         self.db = Database(db_name)
 
-        #only for parts that rotate
+            #only for parts that rotate
         for key, part in self.parts.items():
             if not part.dof.fixed and part.dof.type in ['rotation', 'rule']:
                 self.dynamic_parts.append(part)
@@ -130,8 +131,10 @@ class Arm:
             values['Z'] = endpoint[2]
             if debug:
                 self.plot()
-                print(values)
-            self.db.insert(values)
+                if memory != None:
+                    print(values)
+            if memory != None:
+                self.db.insert(values)
 
         def generator(parts):
             index=0
@@ -158,7 +161,8 @@ class Arm:
                 index += 1
 
         generator(self.dynamic_parts)
-        return db_name
+        if memory != None:
+            return db_name
 
     def motionControl(self, target):
         for key, part in self.parts.items():
@@ -193,7 +197,7 @@ class Arm:
 
     def plot(self):
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.gca(projection='3d') #fig.add_subplot(111, projection='3d')
         for key, obj in self.parts.items():
             origin = np.squeeze(obj.ref_frame.mapFrom(obj.origin))
             endpoint = obj.mapFrom(obj.r)
@@ -201,16 +205,18 @@ class Arm:
                     ys=(origin[1],endpoint[1]),
                     zs=(origin[2],endpoint[2]))
 
-        lim = [-20,20]
-        ax.set_xlim(lim)
-        ax.set_ylim(lim)
+        lim = [-500,500]
+        ax.set_xlim([0, max(lim)])
+        ax.set_ylim([0, max(lim)])
         ax.set_zlim([0, max(lim)])
 
         ax.set_xlabel(r'$X$')
         ax.set_ylabel(r'$Y$')
         ax.set_zlabel(r'$Z$')
-
-        plt.show()
+        ax.view_init(30,30)
+        plt.savefig('img/{}.png'.format(self.img_save_count), dpi=96, transparent=False)
+        self.img_save_count += 1
+        plt.close('all')
 
     def add(self, object):
         if object.name in self.parts.keys():

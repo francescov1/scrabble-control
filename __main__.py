@@ -13,7 +13,8 @@ except:
 
 from time import time, sleep
 
-SERIAL_PORT = "/dev/ttyAMA0"
+#SERIAL_PORT = "/dev/ttyAMA0"
+SERIAL_PORT = "COM7"
 
 def buttonCallback(channel):
     pass
@@ -29,15 +30,15 @@ def setupCamera():
 
 def setupArm():
     arm = Arm()
-    base = Joint('base', (0,0,2.28))
+    base = Joint('base', (0,0,62))
     base.dynamic('translation', axis='y')
-    shoulder = Joint('shoulder', (0,0,10))
+    shoulder = Joint('shoulder', (230,0,0))
     shoulder.attach(base)
-    shoulder.dynamic(type='rotation', axis='y', range=(-pi/2,pi/2))
-    elbow = Joint('elbow', (0,0,12))
+    shoulder.dynamic(type='rotation', axis='y', range=(-pi/2, 0))
+    elbow = Joint('elbow', (207,0,0))
     elbow.attach(shoulder)
-    elbow.dynamic(type='rotation', axis='y', range=(-pi,pi))
-    wrist = Joint('wrist', (0,0,2))
+    elbow.dynamic(type='rotation', axis='y', range=(0,pi))
+    wrist = Joint('wrist', (82,0,0))
     wrist.attach(elbow)
     wrist.dynamic('rule', axis='y', rule=(0,0,-1))
     #shoulder.rotate('y', 1.507)
@@ -60,7 +61,7 @@ def manual():
         #sp += dir
         #print("Setting M{} to {}".format(motor, sp))
         #arduino.set(motor, sp)
-    
+
     print("Ready for manual control")
     add_hotkey('b+up', move, args=[MSG.MOTOR.BASE, 1])
     add_hotkey('s+up', move, args=[MSG.MOTOR.SHOULDER, 1])
@@ -75,14 +76,18 @@ def manual():
 def main():
     arm = setupArm()
 
-    bounding_box = ((0, float('Inf')), None, (0, float('Inf')))
-    arm.generateDatabase(100, debug=False, memory=False, bounding_box=bounding_box)
+    #bounding_box = ((0, float('Inf')), None, ))
+    bounding_box = (None, None, (0, float('Inf')))
+    arm.generateDatabase(20, debug=True, memory=None, bounding_box=bounding_box)
+    #arm.plot()
+    exit()
     #arm.importDatabase('2019-10-09-191803.db')
     angles, delta = arm.motionControl((10,0,5))
-    arm.plot()
+
     setupCamera()
     camera.capture(path)
 
 
 if __name__ == '__main__':
+    main()
     manual()

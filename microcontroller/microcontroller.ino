@@ -16,7 +16,7 @@ void setup() {
   errorFlag = SUCCESS;
 
   SPI.begin();
-  Serial.begin(9600); //Debug & FTDI port
+  Serial.begin(115200); //Debug & FTDI port
   Serial1.begin(PORT_SPEED); //Control PC port
 
   while(!Serial || !Serial1){}
@@ -26,7 +26,7 @@ void setup() {
   
   //motorSetup();
   //autoCalibrate(); //Zero base motors
-  Serial.println("Done setup");
+  //Serial.println("Done setup");
 }
 
 void loop() {
@@ -46,14 +46,14 @@ void loop() {
     byte msgId = buffer[1];
     
     DataUnion data;
-    Serial.println("\nMsg received: ");
-    Serial.print(msgType);
-    Serial.print(msgId);
+    //Serial.println("\nMsg received: ");
+    //Serial.print(msgType);
+    //Serial.print(msgId);
     for (int i=0; i<sizeof(data.ui8); i++) {
       data.ui8[i] = buffer[i+2];
-      Serial.print(data.ui8[i]);
+      //Serial.print(data.ui8[i]);
     }
-
+    
     DataUnion response;
     switch (msgType) {
       case HEARTBEAT:
@@ -65,7 +65,7 @@ void loop() {
         motors[msgId].set(data.i32);
         response.i32 = data.i32;
         sendMsg(SET, msgId, response);
-        Serial.println("Setting motor");
+        //Serial.println("Setting motor");
         break;
         
       case GET:
@@ -74,21 +74,21 @@ void loop() {
           case STATUS:
             response.ui16[0] = motors[msgId].latchedStatusFlags;
             response.ui16[1] = motors[msgId].nonLatchedStatusFlags;
-            Serial.println("status");
+            //Serial.println("status");
             break;
             
           //setpoint
           case SETPOINT:
-            response.i32 = (int32_t)(motors[msgId].setpoint);
-            Serial.println("setpoint");
+            response.ui32 = (uint32_t)(motors[msgId].setpoint);
+            //Serial.println("setpoint");
             break;
           
           case POSITION:
             response.i32 = (int32_t)(motors[msgId].sensor.read());
-            Serial.println("position");
+            //Serial.println("position");
             break;
         }
-        Serial.println(response.i32);
+        //Serial.println(response.i32);
         sendMsg(GET, msgId, response);
         break;
     }
